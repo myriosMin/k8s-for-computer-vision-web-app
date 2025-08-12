@@ -134,5 +134,5 @@ mlruns/*
 sketch.ipynb
 
 # Ignore the files in data directory while keep the folder structure
-aiad-data/*
-yolo-xbd/*
+aiad_data/*
+yolo_xbd/*

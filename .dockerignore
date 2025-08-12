@@ -41,5 +41,5 @@ media/
 secrets/
 
 # Ignore the data directory
-aiad-data/
-yolo-xbd/
+aiad_data/
+yolo_xbd/
