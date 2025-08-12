@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-3xl font-semibold text-white mb-6">Single-File Inference</h1>
+
+  <!-- Upload Form -->
+  <form id="inferForm" 
+        class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
+    <label class="block text-sm text-slate-300 mb-2">Select an input image</label>
+    <input class="w-full border border-slate-600 bg-slate-900 text-white rounded p-2 mb-4" 
+           type="file" name="file" accept="image/*" required />
+
+    <button type="submit" 
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
+      Predict
+    </button>
+  </form>
+
+  <!-- Results -->
+  <div class="mt-6">
+    <h2 class="text-lg font-medium text-slate-200 mb-2">Model Output</h2>
+    <pre id="result" 
+         class="text-xs text-slate-300 bg-slate-900 border border-slate-700 rounded p-4 overflow-auto max-h-96">
+    </pre>
+  </div>
+</div>
+
+<!-- Prediction Script -->
+<script>
+  document.getElementById('inferForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = e.target.querySelector('input[type="file"]').files[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const res = await fetch('/infer-file', {
+      method: 'POST',
+      body: fd
+    });
+
+    const json = await res.json();
+    document.getElementById('result').textContent = JSON.stringify(json, null, 2);
+  });
+</script>
+{% endblock %}

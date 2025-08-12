@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en" class="bg-slate-900 text-slate-100">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ title or "xBD YOLO Console" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="{{ url_for('static', filename='css/dist.css') }}" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen font-sans antialiased">
+    <!-- Navbar -->
+    <nav class="px-6 py-4 bg-slate-800 shadow-md">
+      <div class="max-w-6xl mx-auto flex items-center justify-between">
+        <div class="text-lg font-semibold text-white tracking-wide">
+          xBD YOLO Console
+        </div>
+        <div class="flex gap-6 text-sm">
+          <a href="{{ url_for('index') }}"
+             class="text-slate-300 hover:text-white transition">
+            Data & Training
+          </a>
+          <a href="{{ url_for('inference_page') }}"
+             class="text-slate-300 hover:text-white transition">
+            Inference
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-6">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
