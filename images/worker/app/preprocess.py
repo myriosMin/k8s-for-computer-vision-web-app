@@ -104,6 +104,8 @@ def convert_split(split: str):
         if not yolo_lines:
             print(f"[INFO] no buildings in {jpath.name}")
 
+    print(f"[INFO] Finished processing {split} split")
+
 # Entry point
 def main():
     setup_dirs()

@@ -1,3 +1,9 @@
 # UI
 docker build -f images/ui/Dockerfile -t min-ui . 
 docker run --rm -it -p 8000:8000 --name min-ui min-ui
+
+# Preprocess
+export RAW_DIR=/data/raw
+export YOLO_DIR=/data/yolo
+docker build -t min-preprocess -f images/worker/Dockerfile .
+docker run --rm -v $(pwd)/data/aiad_data:/data/raw -v $(pwd)/data/yolo_xbd:/data/yolo -e RAW_DIR=/data/raw -e YOLO_DIR=/data/yolo min-preprocess
