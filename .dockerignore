@@ -1,0 +1,41 @@
+# Ignore Python cache & build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+build/
+dist/
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore environment & dependency folders
+.env
+.venv/
+env/
+venv/
+
+# Ignore Git & related metadata
+.git
+.gitignore
+.gitattributes
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore logs & temp files
+*.log
+tmp/
+*.tmp
+
+# Ignore large datasets or media 
+data/
+media/
+*.csv
+*.tsv
+
+# Ignore Dockerfile-specific secrets 
+secrets/
