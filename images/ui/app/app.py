@@ -44,7 +44,11 @@ def infer_file():
     tmp = "/tmp/" + f.filename
     f.save(tmp)
     with open(tmp, "rb") as fd:
-        r = requests.post(f"{INFER_URL}/predict", files={"file": fd})
+    fd, tmp = tempfile.mkstemp(dir="/tmp")
+    os.close(fd)  # Close the low-level file descriptor
+    f.save(tmp)
+    with open(tmp, "rb") as file_obj:
+        r = requests.post(f"{INFER_URL}/predict", files={"file": file_obj})
     if r.status_code != 200:
         return jsonify({"error": r.text}), 500
     return r.json(), 200
