@@ -40,6 +40,8 @@ def trigger_train():
 @app.post("/infer-file")
 def infer_file():
     f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"error": "No file uploaded"}), 400
     tmp = "/tmp/" + f.filename
     f.save(tmp)
     with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
