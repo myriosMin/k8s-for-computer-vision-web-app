@@ -39,3 +39,7 @@ media/
 
 # Ignore Dockerfile-specific secrets 
 secrets/
+
+# Ignore the data directory
+aiad_data/
+yolo_xbd/
