@@ -142,5 +142,5 @@ data/yolo_xbd/*
 output/*
 !output/.gitkeep
 
-models/
+models/*
 !models/.gitkeep
