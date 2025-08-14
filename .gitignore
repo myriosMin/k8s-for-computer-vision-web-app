@@ -138,3 +138,6 @@ data/aiad_data.zip
 
 data/yolo_xbd/*
 !data/yolo_xbd/.gitkeep
+
+output/*
+!output/.gitkeep
