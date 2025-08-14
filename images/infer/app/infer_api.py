@@ -17,10 +17,15 @@ from matplotlib import colormaps as cm
 from PIL import Image
 import cv2
 
+import zipfile, tempfile, tarfile
+import shutil
+from pathlib import Path
+from datetime import datetime
 
 # ========== Configuration ==========
 MODEL_PATH = os.getenv("MODEL_PATH", "/models/best.pt")
 IMG_SIZE = int(os.getenv("IMG_SIZE", 1024))
+PRED_DIR = os.getenv("PRED_DIR", "/output/predictions")
 
 
 # ========== Patching ==========
@@ -164,3 +169,106 @@ async def predict(
         "detections": dets,
         "overlay_png_base64": encoded
     })
+    
+    
+# ========== Batch Inference Endpoint ==========
+
+# Helper extractor
+def extract_archive_to_temp(archive_path: Path) -> Path:
+    tmp_dir = Path(tempfile.mkdtemp(prefix="xbd_preprocess_"))
+
+    if archive_path.suffix == ".zip":
+        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            zip_ref.extractall(tmp_dir)
+    elif archive_path.suffixes[-2:] == [".tar", ".gz"] or archive_path.suffix == ".tar":
+        with tarfile.open(archive_path, 'r:*') as tar_ref:
+            tar_ref.extractall(tmp_dir)
+    else:
+        raise ValueError(f"[ERROR] Unsupported archive type: {archive_path.name}")
+
+    print(f"[INFO] Extracted archive to: {tmp_dir}")
+
+    contents = list(tmp_dir.iterdir())
+    if len(contents) == 1 and contents[0].is_dir():
+        print(f"[INFO] Zip contains a root folder: {contents[0].name}, using it")
+        return contents[0]
+
+    return tmp_dir
+
+@app.post("/batch_predict")
+async def batch_predict(
+    request: Request,
+    zipfile: UploadFile = File(...)
+):
+    model = request.app.state.model
+
+    # Step 1: Save uploaded zip
+    tmp_dir = Path(tempfile.mkdtemp())
+    raw_zip_path = tmp_dir / "input.zip"
+    with open(raw_zip_path, "wb") as f:
+        f.write(await zipfile.read())
+
+    # Step 2: Extract
+    extract_dir = extract_archive_to_temp(raw_zip_path)
+
+    # Step 3: Index all images
+    img_paths = list(extract_dir.rglob("*"))
+    img_index = {p.name: p for p in img_paths if p.suffix.lower() in {".png", ".jpg", ".jpeg"}}
+
+    def infer_pre_name(post_name: str):
+        cands = [
+            post_name.replace("post_disaster", "pre_disaster"),
+            post_name.replace("_post_", "_pre_"),
+            post_name.replace("-post", "-pre"),
+            post_name.replace("post", "pre"),
+        ]
+        return cands
+
+    # Step 4: Match post/pre pairs
+    pairs = []
+    for post_name in img_index:
+        if "post" not in post_name.lower():
+            continue
+        for cand in infer_pre_name(post_name):
+            pre_path = img_index.get(cand)
+            if pre_path:
+                pairs.append((img_index[post_name], pre_path))
+                break
+
+    if not pairs:
+        return JSONResponse({"error": "No post/pre image pairs matched."}, status_code=400)
+
+    # Step 5: Predict each pair
+    output_dir = Path(PRED_DIR) / f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for post_path, pre_path in pairs:
+        with open(pre_path, "rb") as f1, open(post_path, "rb") as f2:
+            pre_bytes = f1.read()
+            post_bytes = f2.read()
+
+        img6 = stack_pre_post(pre_bytes, post_bytes, size=IMG_SIZE).to(next(model.model.parameters()).device)
+
+        with torch.no_grad():
+            results = model.predict(source=img6, device=next(model.model.parameters()).device, verbose=False)
+        res = results[0]
+
+        # Generate overlay image
+        img = get_overlay_plot(res, model.names, IMG_SIZE, post_bytes)
+        out_path = output_dir / f"overlay_{post_path.name}"
+        img.save(out_path)
+
+    # Step 6: Zip the results
+    zip_output_path = output_dir.with_suffix(".zip")
+    shutil.make_archive(zip_output_path.with_suffix(""), 'zip', output_dir)
+
+    # Step 7: Return local path as download URL
+    filename = zip_output_path.name
+    return {
+        "status": "success",
+        "num_pairs": len(pairs),
+        "download_url": f"/files/{filename}"
+    }
+    
+from fastapi.staticfiles import StaticFiles
+app.mount("/files", StaticFiles(directory=PRED_DIR), name="files")

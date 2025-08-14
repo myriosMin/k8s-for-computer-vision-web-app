@@ -1,10 +1,24 @@
-FROM python:3.10-slim
+FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Singapore
+
 WORKDIR /app
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 && rm -rf /var/lib/apt/lists/*
+    tzdata python3-opencv git && \
+    ln -fs /usr/share/zoneinfo/Asia/Singapore /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY images/infer/requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
+
 COPY images/infer/app/ ./app
+
 ENV PYTHONPATH=/app
+
 EXPOSE 9000
-CMD ["python","-m","app.infer_api"]
+
+CMD ["uvicorn", "app.infer_api:app", "--host", "0.0.0.0", "--port", "9000"]
