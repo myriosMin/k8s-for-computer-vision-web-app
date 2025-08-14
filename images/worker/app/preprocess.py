@@ -2,7 +2,6 @@ import json, re, os, shutil
 from pathlib import Path
 from .common import DATASETS
 import zipfile, tarfile, tempfile
-from pathlib import Path
 
 CLS_MAP = {"no-damage":0, "minor-damage":1, "major-damage":2, "destroyed":3}
 WKT_RE = re.compile(r"POLYGON\s*\(\(\s*(.*?)\s*\)\)", re.IGNORECASE | re.DOTALL)
