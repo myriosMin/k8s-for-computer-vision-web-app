@@ -134,8 +134,7 @@ mlruns/*
 sketch.ipynb
 
 # Ignore the files in data directory while keep the folder structure
-data/aiad_data/*
-!data/aiad_data/.gitkeep
+data/aiad_data.zip
 
 data/yolo_xbd/*
 !data/yolo_xbd/.gitkeep

@@ -1,116 +1,192 @@
-import os, json, re, shutil, pathlib
+import json, re, os, shutil
 from pathlib import Path
-from PIL import Image
 from .common import DATASETS
+import zipfile, tarfile, tempfile
+from pathlib import Path
 
-# ==== CONFIG ====
-SPLITS = ["train", "test", "tier3"]
-USE_ONLY_POST = True
-MIN_POINTS = 3
-MIN_PERIM_PX = 8
+CLS_MAP = {"no-damage":0, "minor-damage":1, "major-damage":2, "destroyed":3}
+WKT_RE = re.compile(r"POLYGON\s*\(\(\s*(.*?)\s*\)\)", re.IGNORECASE | re.DOTALL)
 
-# Directories from env
-RAW_ROOT = Path(DATASETS["RAW_DIR"])
-YOLO_ROOT = Path(DATASETS["YOLO_DIR"])
-
-# Setup YOLO subdirs
-def setup_dirs():
-    for split in SPLITS:
-        (YOLO_ROOT / "images" / split).mkdir(parents=True, exist_ok=True)
-        (YOLO_ROOT / "labels" / split).mkdir(parents=True, exist_ok=True)
-    print(f"[preprocess] Prepared YOLO dirs at {YOLO_ROOT}")
-
-# WKT polygon parser
-wkt_poly_re = re.compile(r"POLYGON\s*\(\(\s*(.*?)\s*\)\)", re.IGNORECASE | re.DOTALL)
 def parse_wkt_polygon(wkt: str):
-    m = wkt_poly_re.search(wkt)
-    if not m:
-        return []
+    m = WKT_RE.search(wkt or "")
+    if not m: return []
     pts = []
     for pair in m.group(1).split(","):
         a = pair.strip().split()
-        if len(a) != 2:
-            continue
-        pts.append((float(a[0]), float(a[1])))
+        if len(a) != 2: continue
+        x, y = float(a[0]), float(a[1])
+        pts.append((x, y))
     if len(pts) >= 2 and pts[0] == pts[-1]:
         pts = pts[:-1]
     return pts
 
-def poly_perimeter(px_pts):
-    return sum(((px_pts[i][0] - px_pts[(i+1)%len(px_pts)][0])**2 + 
-                (px_pts[i][1] - px_pts[(i+1)%len(px_pts)][1])**2) ** 0.5 
-                for i in range(len(px_pts)))
+def infer_pre_name(post_name: str):
+    cands = [
+        post_name.replace("post_disaster","pre_disaster"),
+        post_name.replace("_post_", "_pre_"),
+        post_name.replace("-post", "-pre"),
+        post_name.replace("post", "pre"),
+    ]
+    return cands
 
-# Actual preprocessing logic
-def convert_split(split: str):
-    split_root = RAW_ROOT / split
-    lbl_dir = split_root / "labels"
-    img_dir = split_root / "images"
-    out_img_dir = YOLO_ROOT / "images" / split
-    out_lbl_dir = YOLO_ROOT / "labels" / split
+def convert_split(xbd_split_root: Path, out_root: Path, split_name: str):
+    img_dir = xbd_split_root / "images"
+    lbl_dir = xbd_split_root / "labels"
+    out_img = out_root / "images" / split_name
+    out_lab = out_root / "labels" / split_name
+    out_img.mkdir(parents=True, exist_ok=True)
+    out_lab.mkdir(parents=True, exist_ok=True)
 
-    json_files = sorted(lbl_dir.glob("*.json"))
-    if not json_files:
-        print(f"[WARN] no JSON in {lbl_dir}")
-        return
+    # Build a quick index of all images by basename for pre/post matching
+    IMG_INDEX = {p.name: p for p in img_dir.rglob("*") if p.suffix.lower() in {".png",".jpg",".jpeg",".tif",".tiff"}}
 
-    for jpath in json_files:
-        with open(jpath, "r") as f:
-            data = json.load(f)
+    pairs_csv = out_root / f"{split_name}_pairs.csv"
+    pairs_f = pairs_csv.open("w")
+    pairs_f.write("post_img,pre_img\n")
 
-        feats = data.get("features", {}).get("xy", []) or []
-        meta = data.get("metadata", {})
-        img_name = meta.get("img_name") or ""
+    jsons = sorted(lbl_dir.glob("*.json"))
+    n_imgs = n_poly = 0
+    for jp in jsons:
+        data = json.loads(jp.read_text())
+        feats_xy = (data.get("features", {}) or {}).get("xy", []) or []
+        meta = data.get("metadata", {}) or {}
+        post_name = meta.get("img_name", "")
+        if not post_name:
+            continue
+        post_path = IMG_INDEX.get(post_name)
+        if not post_path:
+            # try slow fallback
+            for k,v in IMG_INDEX.items():
+                if k.lower() == post_name.lower():
+                    post_path = v; break
+        if not post_path:
+            continue
+        
+        # find pre counterpart
+        pre_path = None
+        for c in infer_pre_name(post_name):
+            pre_path = IMG_INDEX.get(c)
+            if pre_path: break
+            for k,v in IMG_INDEX.items():
+                if k.lower() == c.lower():
+                    pre_path = v; break
+            if pre_path: break
+
         W = int(meta.get("width", meta.get("original_width", 1024)))
         H = int(meta.get("height", meta.get("original_height", 1024)))
 
-        if USE_ONLY_POST and "post" not in img_name.lower():
-            continue
-
-        src_img = img_dir / img_name
-        if not src_img.exists():
-            matches = list(img_dir.rglob(img_name))
-            if matches:
-                src_img = matches[0]
-            else:
-                print(f"[WARN] missing image for {jpath.name}: {img_name}")
+        # write YOLO polygons with damage class id
+        lines = []
+        for obj in feats_xy:
+            props = obj.get("properties", {}) or {}
+            if props.get("feature_type") != "building":
                 continue
-
-        dst_img = out_img_dir / src_img.name
-        if not dst_img.exists():
-            try: os.link(src_img, dst_img)
-            except Exception: shutil.copy2(src_img, dst_img)
-
-        yolo_lines = []
-        for obj in feats:
-            if obj.get("properties", {}).get("feature_type") != "building":
+            subtype = props.get("subtype")
+            if subtype not in CLS_MAP:
                 continue
-
+            cls_id = CLS_MAP[subtype]
             pts = parse_wkt_polygon(obj.get("wkt", ""))
-            if len(pts) < MIN_POINTS or poly_perimeter(pts) < MIN_PERIM_PX:
+            if len(pts) < 3:
                 continue
-
-            norm_pts = []
-            for x, y in pts:
+            # normalize polygon
+            xy = []
+            for x,y in pts:
                 xn = max(0.0, min(1.0, x / W))
                 yn = max(0.0, min(1.0, y / H))
-                norm_pts.extend([xn, yn])
+                xy.extend([xn, yn])
+            lines.append(str(cls_id) + " " + " ".join(f"{v:.6f}" for v in xy))
+            n_poly += 1
 
-            yolo_lines.append("0 " + " ".join(f"{v:.6f}" for v in norm_pts))
+        # copy image to yolo structure
+        dst_img = out_img / post_path.name
+        if not dst_img.exists():
+            try:
+                os.link(post_path, dst_img)
+            except Exception:
+                shutil.copy2(post_path, dst_img)
 
-        out_txt = out_lbl_dir / (dst_img.stem + ".txt")
-        out_txt.write_text("\n".join(yolo_lines))
+        # write label txt
+        (out_lab / (dst_img.stem + ".txt")).write_text("\n".join(lines))
+        n_imgs += 1
 
-        if not yolo_lines:
-            print(f"[INFO] no buildings in {jpath.name}")
+        # write pair if pre exists
+        if pre_path:
+            pairs_f.write(f"{dst_img.name},{pre_path.name}\n")
 
-    print(f"[INFO] Finished processing {split} split")
+    pairs_f.close()
+    print(f"[{split_name}] images: {n_imgs}  polygons: {n_poly}  pairs: {sum(1 for _ in open(pairs_csv))-1}")
 
-# Entry point
+def extract_archive_to_temp(archive_path: Path) -> Path:
+    tmp_dir = Path(tempfile.mkdtemp(prefix="xbd_preprocess_"))
+    if archive_path.suffix == ".zip":
+        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+            zip_ref.extractall(tmp_dir)
+    elif archive_path.suffixes[-2:] == [".tar", ".gz"] or archive_path.suffix == ".tar":
+        with tarfile.open(archive_path, 'r:*') as tar_ref:
+            tar_ref.extractall(tmp_dir)
+    else:
+        raise ValueError(f"Unsupported archive type: {archive_path.name}")
+
+    print(f"[INFO] Extracted archive to: {tmp_dir}")
+
+    # check if there's a single subfolder
+    contents = list(tmp_dir.iterdir())
+    if len(contents) == 1 and contents[0].is_dir():
+        print(f"[INFO] Zip contains a root folder: {contents[0].name}, using it")
+        return contents[0]
+    
+    return tmp_dir
+
+def is_flat_xbd_structure(path: Path) -> bool:
+    return (path / "images").exists() and (path / "labels").exists()
+
 def main():
-    setup_dirs()
-    for s in SPLITS:
-        convert_split(s)
+    input_path = Path(DATASETS["RAW_ZIP_PATH"])
+    out_root = Path(DATASETS["YOLO_DIR"])
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input path not found: {input_path}")
+
+    if input_path.is_file():
+        print(f"[INFO] Processing archive: {input_path.name}")
+        extracted = extract_archive_to_temp(input_path)
+    else:
+        print(f"[INFO] Processing folder: {input_path}")
+        extracted = input_path
+
+    # Detect structure
+    if is_flat_xbd_structure(extracted):
+        print("[INFO] Detected flat structure")
+        convert_split(extracted, out_root, "train")
+    else:
+        print("[INFO] Detected split subfolders")
+        for sub in extracted.iterdir():
+            if not sub.is_dir():
+                continue
+            name = sub.name.lower()
+            if "train" in name:
+                convert_split(sub, out_root, "train")
+            elif any(n in name for n in ["tier3", "val", "valid", "eval"]):
+                convert_split(sub, out_root, "val")
+            elif "test" in name:
+                convert_split(sub, out_root, "test")
+            else:
+                print(f"[INFO] Unrecognized folder '{name}' — defaulting to train")
+                convert_split(sub, out_root, "train")
+
+    # Write YOLO-compatible dataset yaml
+    yaml = f"""path: {out_root.resolve()}
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: building_no
+  1: building_minor
+  2: building_major
+  3: building_destroyed
+"""
+    (out_root / "xbd6.yaml").write_text(yaml)
+    print("Wrote", out_root / "xbd6.yaml")
 
 if __name__ == "__main__":
     main()
