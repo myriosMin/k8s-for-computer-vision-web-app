@@ -42,7 +42,10 @@ def infer_file():
     f = request.files.get("file")
     tmp = "/tmp/" + f.filename
     f.save(tmp)
-    with open(tmp, "rb") as fd:
+    with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+        f.save(tmpfile.name)
+        tmpfile_path = tmpfile.name
+    with open(tmpfile_path, "rb") as fd:
         r = requests.post(f"{INFER_URL}/predict", files={"file": fd})
     if r.status_code != 200:
         return jsonify({"error": r.text}), 500
