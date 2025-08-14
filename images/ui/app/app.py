@@ -23,7 +23,7 @@ def upload_batch():
     os.makedirs(up_dir, exist_ok=True)
     files = request.files.getlist("files")
     for f in files:
-        f.save(os.path.join(up_dir, f.filename))
+        f.save(os.path.join(up_dir, secure_filename(f.filename)))
     return redirect(url_for("index"))
 
 @app.post("/trigger-preprocess")
