@@ -125,7 +125,7 @@ def extract_archive_to_temp(archive_path: Path) -> Path:
         with tarfile.open(archive_path, 'r:*') as tar_ref:
             tar_ref.extractall(tmp_dir)
     else:
-        raise ValueError(f"Unsupported archive type: {archive_path.name}")
+        raise ValueError(f"[ERROR] Unsupported archive type: {archive_path.name}")
 
     print(f"[INFO] Extracted archive to: {tmp_dir}")
 

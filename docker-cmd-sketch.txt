@@ -7,3 +7,13 @@ export RAW_DIR=data/aiad_data.zip
 export YOLO_DIR=/data/yolo_xbd
 docker build -t min-preprocess -f images/worker/Dockerfile .
 docker run --rm -v $(pwd)/data/aiad_data.zip:/data/aiad_data.zip -v $(pwd)/data/yolo_xbd:/data/yolo_xbd -e RAW_DIR=/data/aiad_data.zip -e YOLO_DIR=/data/yolo_xbd min-preprocess
+
+# Train
+export YOLO_DIR=/data/yolo_xbd
+export DATA_YAML=/data/yolo_xbd/xbd6.yaml
+export YOLO_MODEL=yolo11m-seg.pt
+export EPOCHS=5
+export IMG_SIZE=1024
+export BATCH=4
+docker build -t min-preprocess -f images/worker/Dockerfile .
+docker run --rm -v $(pwd)/data/aiad_data.zip:/data/aiad_data.zip -v $(pwd)/data/yolo_xbd:/data/yolo_xbd -v $(pwd)/output:/output -e RAW_DIR=/data/aiad_data.zip -e YOLO_DIR=/data/yolo_xbd -e YOLO_MODEL=yolo11n-seg.pt -e EPOCHS=5 -e IMG_SIZE=1024 -e BATCH=4 min-preprocess
