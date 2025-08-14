@@ -23,8 +23,7 @@ def upload_batch():
     os.makedirs(up_dir, exist_ok=True)
     files = request.files.getlist("files")
     for f in files:
-        filename = secure_filename(f.filename)
-        f.save(os.path.join(up_dir, filename))
+        f.save(os.path.join(up_dir, secure_filename(f.filename)))
     return redirect(url_for("index"))
 
 @app.post("/trigger-preprocess")
@@ -41,6 +40,8 @@ def trigger_train():
 @app.post("/infer-file")
 def infer_file():
     f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"error": "No file uploaded"}), 400
     tmp = "/tmp/" + f.filename
     f.save(tmp)
     with open(tmp, "rb") as fd:
