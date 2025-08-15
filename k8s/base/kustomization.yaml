@@ -11,7 +11,7 @@ resources:
   - deploy-ui.yaml
   - svc-ui.yaml
   - deploy-infer.yaml
-  - svc-infer.yaml
+  - deploy-infer.yaml
   - ingress.yaml
 
   - job-preprocess.yaml
