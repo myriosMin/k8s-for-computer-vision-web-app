@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: xview
+resources:
+  - namespace.yaml
+  - configmap-app.yaml
+  - secret-app.yaml
+  - pvc-datasets.yaml
+  - pvc-models.yaml
+
+  - deploy-ui.yaml
+  - svc-ui.yaml
+  - deploy-infer.yaml
+  - svc-infer.yaml
+  - ingress.yaml
+
+  - job-preprocess.yaml
+  - job-train.yaml
+
+  - pdb-ui.yaml
+  - pdb-infer.yaml
+
+  - hpa-ui.yaml
+  - hpa-infer.yaml
+
+  - netpol-default-deny.yaml
+  - netpol-allow-ui-infer.yaml
+  - netpol-egress-dns.yaml

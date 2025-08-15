@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: infer-pdb
+  namespace: xview
+  labels:
+    app: infer
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: infer

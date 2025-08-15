@@ -113,10 +113,7 @@ def convert_split(xbd_split_root: Path, out_root: Path, split_name: str):
             pairs_f.write(f"{dst_img.name},{pre_path.name}\n")
 
     pairs_f.close()
-            n_pairs += 1
-
-    pairs_f.close()
-    print(f"[{split_name}] images: {n_imgs}  polygons: {n_poly}  pairs: {n_pairs}")
+    print(f"[{split_name}] images: {n_imgs}  polygons: {n_poly}  pairs: {sum(1 for _ in open(pairs_csv))-1}")
 
 def extract_archive_to_temp(archive_path: Path) -> Path:
     tmp_dir = Path(tempfile.mkdtemp(prefix="xbd_preprocess_"))

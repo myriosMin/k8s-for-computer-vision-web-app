@@ -11,7 +11,7 @@ docker run --rm -v $(pwd)/data/aiad_data.zip:/data/aiad_data.zip -v $(pwd)/data/
 # Train
 export YOLO_DIR=/data/yolo_xbd
 export DATA_YAML=/data/yolo_xbd/xbd6.yaml
-export YOLO_MODEL=yolo11m-seg.pt
+export YOLO_MODEL=yolo11n-seg.pt
 export EPOCHS=5
 export IMG_SIZE=1024
 export BATCH=4

@@ -26,6 +26,7 @@ from datetime import datetime
 MODEL_PATH = os.getenv("MODEL_PATH", "/models/best.pt")
 IMG_SIZE = int(os.getenv("IMG_SIZE", 1024))
 PRED_DIR = os.getenv("PRED_DIR", "/output/predictions")
+BASE_WEIGHTS = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
 
 
 # ========== Patching ==========
@@ -115,7 +116,14 @@ def get_overlay_plot(res, class_names, img_size, post_bytes):
 # ========== FastAPI with Lifespan ==========
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model = YOLO(MODEL_PATH)
+    model_file = Path(MODEL_PATH)
+    if model_file.exists():
+        print(f"[INFO] Loading model from {model_file}")
+        model = YOLO(str(model_file))
+    else:
+        print(f"[WARN] {model_file} not found. Falling back to base weights: {BASE_WEIGHTS}")
+        print("[WARN] This is totally not recommended. Please train the model first, or put best.pt under /models/")
+        model = YOLO(BASE_WEIGHTS)
     patch_first_conv_to_6ch(model.model)
     model.model.eval()
     app.state.model = model
@@ -126,6 +134,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# ========== Health Check ==========
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
 
 # ========== Inference Endpoint ==========
 @app.post("/predict")
