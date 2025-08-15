@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: preprocess
+  namespace: xview
+  labels:
+    app: preprocess
+    part-of: xview
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: preprocess
+        part-of: xview
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: preprocess
+        image: worker:dev
+        imagePullPolicy: IfNotPresent
+        command: ["python","-m","app.preprocess"]
+        envFrom:
+        - configMapRef: 
+            name: app-config
+        volumeMounts:
+        - name: datasets
+          mountPath: /data
+        resources:
+          requests: 
+            cpu: "250m"
+            memory: "512Mi"
+          limits: 
+            cpu: "1"
+            memory: "2Gi"
+      volumes:
+      - name: datasets
+        persistentVolumeClaim:
+          claimName: datasets-pvc

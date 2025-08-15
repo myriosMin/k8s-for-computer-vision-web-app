@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: train
+  namespace: xview
+  labels:
+    app: train
+    part-of: xview
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: train
+        part-of: xview
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: train
+        image: worker:dev
+        imagePullPolicy: IfNotPresent
+        command: ["python","-m","app.train"]
+        envFrom:
+        - configMapRef: 
+            name: app-config
+        resources:
+          requests: 
+            cpu: "1"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+            nvidia.com/gpu: "1"   # ignored if device plugin absent
+        volumeMounts:
+        - name: datasets
+          mountPath: /data
+        - name: models
+          mountPath: /models
+      volumes:
+      - name: datasets
+        persistentVolumeClaim:
+          claimName: datasets-pvc
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc

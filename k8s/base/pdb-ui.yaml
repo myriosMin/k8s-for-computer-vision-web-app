@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ui-pdb
+  namespace: xview
+  labels:
+    app: ui
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ui

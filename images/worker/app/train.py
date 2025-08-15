@@ -1,4 +1,5 @@
 # train.py
+import shutil
 from ultralytics import YOLO
 from ultralytics.data import dataset as dsmod
 import torch
@@ -98,7 +99,8 @@ def build_image_index(images_dir: Path):
 def main():
     # Config from ENV or default
     root = Path(os.getenv("YOLO_DIR", "/data/yolo_xbd"))
-    model_path = os.getenv("YOLO_MODEL", "yolo11n-seg.pt")
+    model_path = os.getenv("MODEL_PATH", "/models/best.pt")
+    base_weights = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
     data_yaml = os.getenv("DATA_YAML", str(root / "xbd6.yaml"))
     epochs = int(os.getenv("EPOCHS", "10"))
     imgsz = int(os.getenv("IMG_SIZE", "1024"))
@@ -122,7 +124,13 @@ def main():
     )
 
     # Load and patch model
-    model = YOLO(model_path)
+    model_file = Path(model_path)
+    if model_file.exists():
+        print(f"[INFO] Loading model from {model_file}. This will be a fine-tuning task.")
+        model = YOLO(str(model_file))
+    else:
+        print(f"[WARN] {model_file} not found. Falling back to base weights: {base_weights}")
+        model = YOLO(base_weights)
     patch_first_conv_to_6ch(model.model)
 
     # Start training
@@ -139,6 +147,19 @@ def main():
         exist_ok=True
     )
     print(f"[done] Results saved at {results.save_dir}")
+    
+    best = Path(results.save_dir) / "weights" / "best.pt"
+    pub = Path(os.getenv("MODELS_DIR", "/models")) / "best.pt"
+
+    try:
+        pub.parent.mkdir(parents=True, exist_ok=True)
+        # Prefer atomic replace to avoid partial reads by infer pods
+        tmp = pub.with_suffix(".pt.tmp")
+        shutil.copy2(best, tmp)
+        os.replace(tmp, pub)
+        print(f"[publish] Copied best weight to {pub}")
+    except Exception as e:
+        print(f"[publish][WARN] Could not publish best.pt to {pub}: {e}")
 
 
 if __name__ == "__main__":
