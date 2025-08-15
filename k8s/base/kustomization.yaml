@@ -9,8 +9,6 @@ resources:
   - pvc-models.yaml
 
   - deploy-ui.yaml
-  - svc-ui.yaml
-  - deploy-infer.yaml
   - deploy-infer.yaml
   - ingress.yaml
 
