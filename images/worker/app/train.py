@@ -43,6 +43,8 @@ class XBD6ChannelDataset(dsmod.YOLODataset):
         # Lookup pre-disaster image
         pre_path = self.infer_pre_path(post_path)
         pre_bgr = cv2.imread(pre_path, cv2.IMREAD_COLOR)
+        if pre_bgr is None:
+            raise FileNotFoundError(f"Pre-disaster image not found or unreadable: {pre_path}")
         pre_rgb = cv2.cvtColor(pre_bgr, cv2.COLOR_BGR2RGB)
 
         H, W = post_img.shape[1:]
