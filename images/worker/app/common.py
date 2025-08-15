@@ -1,4 +1,5 @@
-import os, torch
+import os
+import torch
 
 def device_str():
     return "cuda" if torch.cuda.is_available() else "cpu"
