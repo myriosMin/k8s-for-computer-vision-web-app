@@ -8,14 +8,14 @@ UI_IMG     ?= ui:dev
 WORKER_IMG ?= worker:dev
 INFER_IMG  ?= infer:dev
 
-.PHONY: init up addons docker-env build deploy redeploy undeploy down \
+.PHONY: all up addons docker-env build deploy redeploy undeploy down \
         wait ui infer url get desc logs \
         rollout-infer rollout-ui scale-ui scale-infer \
         job-preprocess job-train train-and-reload job-clean \
         hpa-on hpa-off tunnel help
 
 # ======= 0) One-shot happy path =======
-init: up addons docker-env build deploy wait url  ## Start minikube, build, deploy, wait, print URL
+all: up addons docker-env build deploy wait url  ## Start minikube, build, deploy, wait, print URL
 
 # ======= 1) Cluster/bootstrap =======
 up:                       ## Start Minikube
