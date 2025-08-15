@@ -78,8 +78,6 @@ For the full pipeline — start Minikube, enable addons, build images, deploy, w
 make all
 ```
 
-(*`make all` is an alias for `make init` in the Makefile.*)
-
 ---
 
 ### 1. Start Minikube and Enable Addons
