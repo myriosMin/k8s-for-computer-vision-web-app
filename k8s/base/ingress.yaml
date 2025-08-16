@@ -4,7 +4,7 @@ metadata:
   name: ui
   namespace: xview
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    kubernetes.io/ingress.class: nginx
 spec:
   ingressClassName: nginx
   rules:

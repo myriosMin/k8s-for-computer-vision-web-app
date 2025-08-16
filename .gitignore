@@ -142,6 +142,7 @@ data/yolo_xbd/*
 
 output/*
 !output/.gitkeep
+!output/predictions/.gitkeep
 
 models/*
 !models/.gitkeep

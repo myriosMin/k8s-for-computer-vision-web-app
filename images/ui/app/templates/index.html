@@ -4,10 +4,12 @@
   <h1 class="text-3xl font-semibold text-white mb-6">Data Loading & Training</h1>
 
   <!-- Batch Upload -->
-  <form class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition" 
-        action="/upload-batch" method="post" enctype="multipart/form-data">
-    <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select files)</label>
-    <input class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded" type="file" name="files" multiple />
+  <form id="uploadForm"
+        class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition"
+        action="/upload-dataset" method="post" enctype="multipart/form-data">
+    <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select a zipped file)</label>
+    <input class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded"
+           type="file" name="file" multiple />
     <button class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded" type="submit">
       Upload
     </button>
@@ -16,43 +18,116 @@
   <!-- Configuration + Results -->
   <div class="grid md:grid-cols-2 gap-6 mt-8">
     <!-- Model Config -->
-    <form class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
+    <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
       <h2 class="text-xl font-semibold text-white mb-4">Model Configuration</h2>
 
-      <label class="block text-sm text-slate-400 mb-1">YOLO model</label>
-      <select class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4">
+      <label class="block text-sm text-slate-400 mb-1">Base Weights (first training only)</label>
+      <select id="baseWeights"
+              class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-2">
         <option>yolo11n-seg.pt</option>
         <option>yolo11m-seg.pt</option>
         <option>yolo11l-seg.pt</option>
       </select>
+      <p class="text-xs text-slate-500 mb-4">
+        Only used for the first training run. Subsequent training uses <code>best.pt</code> from the last run.
+      </p>
 
       <label class="block text-sm text-slate-400 mb-1">Image Size (imgsz)</label>
-      <input class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4" 
-             type="number" name="imgsz" value="1024" />
+      <input id="imgsz" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
+             type="number" value="1024" />
 
       <label class="block text-sm text-slate-400 mb-1">Epochs</label>
-      <input class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-6" 
-             type="number" name="epochs" value="10" />
+      <input id="epochs" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
+             type="number" value="10" />
+
+      <label class="block text-sm text-slate-400 mb-1">Batch Size</label>
+      <input id="batch" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-6"
+             type="number" value="8" />
 
       <div class="flex flex-wrap gap-3">
-        <button formaction="/trigger-preprocess" formmethod="post" 
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
+        <button id="btnPreprocess" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
           Run Preprocess
         </button>
-        <button formaction="/trigger-train" formmethod="post" 
-                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded">
+        <button id="btnTrain" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded">
           Start Training
         </button>
       </div>
-    </form>
+
+      <!-- Loading bar -->
+      <div id="jobLoading" class="hidden mt-4 w-full bg-slate-700 rounded h-2 overflow-hidden">
+        <div class="bg-indigo-500 h-2 animate-pulse" style="width: 100%"></div>
+      </div>
+    </div>
 
     <!-- Results -->
     <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm">
       <h2 class="text-xl font-semibold text-white mb-4">Latest Results / Metrics</h2>
       <div id="metrics" class="text-sm text-slate-400">
-        Train logs & mAP/PR curves will be written under <code class="text-slate-300">/models/runs</code>; surface them here later.
+        No recent training run. Train logs & mAP/PR curves will appear here.
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  async function triggerJob(endpoint, jobName, formData) {
+    document.getElementById('jobLoading').classList.remove('hidden');
+    document.getElementById('metrics').textContent = `${jobName} job running...`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // Poll job status every 10s
+        const poll = setInterval(async () => {
+          const statusRes = await fetch(`/job-status/${jobName}`);
+          const statusData = await statusRes.json();
+
+          if (statusData.succeeded > 0) {
+            clearInterval(poll);
+            document.getElementById('jobLoading').classList.add('hidden');
+            document.getElementById('metrics').textContent =
+              `${jobName} job completed successfully.`;
+          }
+          if (statusData.failed > 0) {
+            clearInterval(poll);
+            document.getElementById('jobLoading').classList.add('hidden');
+            document.getElementById('metrics').textContent =
+              `${jobName} job failed.`;
+          }
+        }, 10000);
+      } else {
+        document.getElementById('jobLoading').classList.add('hidden');
+        document.getElementById('metrics').textContent = `Error: ${data.message}`;
+      }
+    } catch (err) {
+      document.getElementById('jobLoading').classList.add('hidden');
+      document.getElementById('metrics').textContent = `Error: ${err}`;
+    }
+  }
+
+  // Preprocess button
+  document.getElementById('btnPreprocess').addEventListener('click', (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("dataset", "aiad_data.zip");  // could make dynamic later
+    formData.append("img_size", document.getElementById('imgsz').value);
+    triggerJob('/trigger-preprocess', 'preprocess', formData);
+  });
+
+  // Train button
+  document.getElementById('btnTrain').addEventListener('click', (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("base_weights", document.getElementById('yoloModel').value);
+    formData.append("img_size", document.getElementById('imgsz').value);
+    formData.append("epochs", document.getElementById('epochs').value);
+    formData.append("batch", "8");  // could add input field later if needed
+    triggerJob('/trigger-train', 'train', formData);
+  });
+</script>
 {% endblock %}

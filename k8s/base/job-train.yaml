@@ -18,12 +18,34 @@ spec:
       restartPolicy: Never
       containers:
       - name: train
-        image: worker:dev
+        image: localhost/worker:dev
         imagePullPolicy: IfNotPresent
         command: ["python","-m","app.train"]
         envFrom:
-        - configMapRef: 
+        - configMapRef:
             name: app-config
+        # These four will override the values in app-config, if provided in ui
+        env:
+        - name: BASE_WEIGHTS
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: BASE_WEIGHTS
+        - name: EPOCHS
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: EPOCHS
+        - name: IMG_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: IMG_SIZE
+        - name: BATCH
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: BATCH
         resources:
           requests: 
             cpu: "1"
@@ -31,16 +53,16 @@ spec:
           limits:
             cpu: "4"
             memory: "8Gi"
-            nvidia.com/gpu: "1"   # ignored if device plugin absent
         volumeMounts:
         - name: datasets
           mountPath: /data
         - name: models
           mountPath: /models
       volumes:
-      - name: datasets
-        persistentVolumeClaim:
-          claimName: datasets-pvc
-      - name: models
-        persistentVolumeClaim:
-          claimName: models-pvc
+        - name: datasets
+          hostPath:
+            path: /data
+            type: Directory
+        - name: models
+          persistentVolumeClaim:
+            claimName: models-pvc
