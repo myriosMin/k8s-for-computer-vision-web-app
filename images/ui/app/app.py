@@ -1,55 +1,134 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os, requests
+import tempfile
+import zipfile
+import subprocess
 
 INFER_URL = os.getenv("INFER_URL", "http://infer:9000")
 NAMESPACE = os.getenv("NAMESPACE", "xview")
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
+# Health check
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
+
+# Serve main training template
 @app.get("/")
 def index():
-    # Page 1: batch upload, config, metrics
+    # Page 1: model training, batch upload, config, metrics
     return render_template("index.html")
 
+# Serve inference template
 @app.get("/inference")
 def inference_page():
-    # Page 2: single-file inference
+    # Page 2: inference
     return render_template("inference.html")
 
-@app.post("/upload-batch")
-def upload_batch():
-    # Save uploaded files into the mounted PVC path shared by jobs
-    up_dir = os.getenv("DATASET_MOUNT", "/datasets/raw")
-    os.makedirs(up_dir, exist_ok=True)
-    files = request.files.getlist("files")
-    for f in files:
-        f.save(os.path.join(up_dir, secure_filename(f.filename)))
-    return redirect(url_for("index"))
-
+# Trigger preprocessing job
 @app.post("/trigger-preprocess")
 def trigger_preprocess():
-    # In dev, we rely on Kubernetes Job already mounted to read /datasets/raw
-    # You can add parameters here if needed via a small control plane or k8s client.
-    return jsonify({"status": "ok", "message": "Preprocess Job will run via kubectl apply (see README)."}), 202
+    try:
+        subprocess.run(["make", "job-preprocess"], check=True)
+        return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
+    except subprocess.CalledProcessError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.post("/trigger-train")
 def trigger_train():
-    # Same—training is kicked by kubectl job (see README). You can pass config via ConfigMap/Secret.
-    return jsonify({"status":"ok","message":"Train Job will run via kubectl apply (see README)."}), 202
+    try:
+        base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
+        epochs = request.form.get("epochs", "10")
+        img_size = request.form.get("img_size", "1024")
+        batch = request.form.get("batch", "8")
 
+        subprocess.run([
+            "make", "job-train",
+            f"BASE_WEIGHTS={base_weights}",
+            f"EPOCHS={epochs}",
+            f"IMG_SIZE={img_size}",
+            f"BATCH={batch}"
+        ], check=True)
+
+        return jsonify({"status": "ok", "message": "Train job started"}), 202
+    except subprocess.CalledProcessError as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# Retrieve job status
+@app.get("/job-status/<jobname>")
+def job_status(jobname):
+    try:
+        output = subprocess.check_output(
+            ["kubectl", "-n", NAMESPACE, "get", "job", jobname, "-o", "json"]
+        )
+        import json
+        status = json.loads(output)["status"]
+        return jsonify({
+            "active": status.get("active", 0),
+            "succeeded": status.get("succeeded", 0),
+            "failed": status.get("failed", 0),
+        })
+    except subprocess.CalledProcessError:
+        return jsonify({"error": "Job not found"}), 404
+
+# Single inference
 @app.post("/infer-file")
 def infer_file():
-    f = request.files.get("file")
-    if not f or not f.filename:
-        return jsonify({"error": "No file uploaded"}), 400
-    tmp = "/tmp/" + f.filename
-    f.save(tmp)
-    with open(tmp, "rb") as fd:
-    fd, tmp = tempfile.mkstemp(dir="/tmp")
-    os.close(fd)  # Close the low-level file descriptor
-    f.save(tmp)
-    with open(tmp, "rb") as file_obj:
-        r = requests.post(f"{INFER_URL}/predict", files={"file": file_obj})
+    # Expect both pre- and post-disaster files from the form
+    pre_file = request.files.get("pre_disaster")
+    post_file = request.files.get("post_disaster")
+
+    if not pre_file or not post_file:
+        return jsonify({"error": "Both pre_disaster and post_disaster files are required"}), 400
+
+    # Save temporarily
+    tmp_pre = os.path.join("/tmp", pre_file.filename)
+    tmp_post = os.path.join("/tmp", post_file.filename)
+    pre_file.save(tmp_pre)
+    post_file.save(tmp_post)
+
+    # Send both files to the FastAPI inference API
+    with open(tmp_pre, "rb") as fd_pre, open(tmp_post, "rb") as fd_post:
+        r = requests.post(
+            f"{INFER_URL}/predict",
+            files={
+                "pre_disaster": ("pre_disaster.png", fd_pre, "image/png"),
+                "post_disaster": ("post_disaster.png", fd_post, "image/png"),
+            },
+        )
+
     if r.status_code != 200:
         return jsonify({"error": r.text}), 500
+
+    return r.json(), 200
+
+# Batch inference
+@app.post("/upload-batch")
+def upload_batch():
+    # Get uploaded image files
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"error": "No files uploaded"}), 400
+
+    # Create a temporary zip file
+    tmp_dir = tempfile.mkdtemp()
+    zip_path = os.path.join(tmp_dir, "batch_input.zip")
+
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        for f in files:
+            # Save each file directly into the zip
+            # Keep only filename to avoid directory nesting
+            zipf.writestr(f.filename, f.read())
+
+    # Send zip to FastAPI batch endpoint
+    with open(zip_path, "rb") as fd:
+        r = requests.post(
+            f"{INFER_URL}/batch_predict",
+            files={"zipfile": ("batch_input.zip", fd, "application/zip")}
+        )
+
+    if r.status_code != 200:
+        return jsonify({"error": r.text}), 500
+
     return r.json(), 200

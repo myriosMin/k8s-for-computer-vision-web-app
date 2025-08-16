@@ -3,10 +3,10 @@ FROM node:22-bullseye AS web
 
 WORKDIR /ui
 
-COPY images/ui/app/templates/ ../templates/
-COPY images/ui/app/static/js/ ../static/js/
-COPY images/ui/app/static/css/tailwind.css ./tailwind.css
-COPY images/ui/app/static/css/tailwind.config.js ./tailwind.config.js
+COPY app/templates/ ../templates/
+COPY app/static/js/ ../static/js/
+COPY app/static/css/tailwind.css ./tailwind.css
+COPY app/static/css/tailwind.config.js ./tailwind.config.js
 
 # Tailwind CLI (no config = just default)
 RUN npm init -y && npm i -D tailwindcss@^3 && \
@@ -25,11 +25,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential curl && rm -rf /var/lib/apt/lists/*
 
-COPY images/ui/requirements.txt .
+COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY images/ui/app/ ./ 
+COPY app/ ./
 
 # bring minified CSS
 COPY --from=web /ui/dist.css ./static/css/dist.css

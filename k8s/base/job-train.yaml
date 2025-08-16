@@ -24,6 +24,15 @@ spec:
         envFrom:
         - configMapRef: 
             name: app-config
+        env:                  # updates from ui, if any
+        - name: BASE_WEIGHTS
+          value: "${BASE_WEIGHTS}"
+        - name: EPOCHS
+          value: "${EPOCHS}"
+        - name: IMG_SIZE
+          value: "${IMG_SIZE}"
+        - name: BATCH
+          value: "${BATCH}"
         resources:
           requests: 
             cpu: "1"

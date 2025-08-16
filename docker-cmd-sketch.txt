@@ -21,3 +21,43 @@ docker run --rm -v $(pwd)/data/aiad_data.zip:/data/aiad_data.zip -v $(pwd)/data/
 # Infer
 docker build -t min-infer-api -f images/infer/Dockerfile .
 docker run --rm -p 9000:9000 -v $(pwd)/models:/models -v $(pwd)/output/predictions:/output/predictions -e MODEL_PATH=/models/best.pt -e IMG_SIZE=1024 min-infer-api
+
+# k8s order
+eval $(minikube -p minikube docker-env)
+
+ns
+kubectl apply -f k8s/base/namespace.yaml
+
+configs and secrets
+kubectl apply -f k8s/base/configmap-app.yaml
+kubectl apply -f k8s/base/secret-app.yaml
+
+pvc
+kubectl apply -f k8s/base/pvc-datasets.yaml
+kubectl apply -f k8s/base/pvc-models.yaml
+kubectl apply -f k8s/base/pvc-outputs.yaml
+
+deploy and service
+kubectl apply -f k8s/base/deploy-infer.yaml
+kubectl apply -f k8s/base/deploy-ui.yaml
+
+pdb
+kubectl apply -f k8s/base/pdb-infer.yaml
+kubectl apply -f k8s/base/pdb-ui.yaml
+
+jobs
+kubectl apply -f k8s/base/job-preprocess.yaml
+kubectl apply -f k8s/base/job-train.yaml
+
+hpa
+kubectl apply -f k8s/base/hpa-infer.yaml
+kubectl apply -f k8s/base/hpa-ui.yaml
+
+network
+kubectl apply -f k8s/base/netpol-default-deny.yaml
+kubectl apply -f k8s/base/netpol-allow-ui-infer.yaml
+kubectl apply -f k8s/base/netpol-allow-egress-web.yaml
+kubectl apply -f k8s/base/netpol-egress-dns.yaml
+
+ingress
+kubectl apply -f k8s/base/ingress.yaml
