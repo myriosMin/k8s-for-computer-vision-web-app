@@ -2,10 +2,26 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import os, requests
 import tempfile
 import zipfile
-import subprocess
+import subprocess, json
 
 INFER_URL = os.getenv("INFER_URL", "http://infer:9000")
 NAMESPACE = os.getenv("NAMESPACE", "xview")
+CONFIGMAP_NAME = "app-config"
+
+def patch_configmap(overrides: dict):
+    """
+    Generic helper to merge a dict of key→value into the app-config ConfigMap.
+    values must be strings.
+    """
+    # ensure all values are strings
+    data = {k: str(v) for k, v in overrides.items()}
+    patch = {"data": data}
+    subprocess.run([
+        "kubectl", "patch", "configmap", CONFIGMAP_NAME,
+        "-n", NAMESPACE,
+        "--type=merge",
+        "-p", json.dumps(patch)
+    ], check=True)
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -26,34 +42,60 @@ def inference_page():
     # Page 2: inference
     return render_template("inference.html")
 
+# Mount uploaded dataset
+@app.post("/upload-dataset")
+def upload_dataset():
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    save_path = os.path.join("/data/raw", file.filename)  # volume mount
+    file.save(save_path)
+
+    return jsonify({"status": "ok", "path": save_path}), 200
+
 # Trigger preprocessing job
 @app.post("/trigger-preprocess")
 def trigger_preprocess():
     try:
+        dataset_file = request.form.get("dataset", "aiad_data.zip")
+        img_size      = request.form.get("img_size", "1024")
+
+        patch_configmap({
+            "RAW_ZIP_PATH": dataset_file,
+            "IMG_SIZE":      img_size
+        })
+
+        # launch job
         subprocess.run(["make", "job-preprocess"], check=True)
         return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
+
     except subprocess.CalledProcessError as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Triggering preprocess job failed." + str(e)}), 500
+
+# Trigger training job
 
 @app.post("/trigger-train")
 def trigger_train():
     try:
         base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
-        epochs = request.form.get("epochs", "10")
-        img_size = request.form.get("img_size", "1024")
-        batch = request.form.get("batch", "8")
+        epochs       = request.form.get("epochs",       "10")
+        img_size     = request.form.get("img_size",     "1024")
+        batch        = request.form.get("batch",        "8")
 
-        subprocess.run([
-            "make", "job-train",
-            f"BASE_WEIGHTS={base_weights}",
-            f"EPOCHS={epochs}",
-            f"IMG_SIZE={img_size}",
-            f"BATCH={batch}"
-        ], check=True)
+        patch_configmap({
+            "BASE_WEIGHTS": base_weights,
+            "EPOCHS":       epochs,
+            "IMG_SIZE":     img_size,
+            "BATCH":        batch
+        })
 
+        # launch job
+        subprocess.run(["make", "job-train"], check=True)
         return jsonify({"status": "ok", "message": "Train job started"}), 202
+
     except subprocess.CalledProcessError as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Triggering train job failed." + str(e)}), 500
 
 # Retrieve job status
 @app.get("/job-status/<jobname>")

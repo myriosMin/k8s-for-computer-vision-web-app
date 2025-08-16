@@ -6,10 +6,10 @@
   <!-- Batch Upload -->
   <form id="uploadForm"
         class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition"
-        action="/upload-batch" method="post" enctype="multipart/form-data">
-    <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select files)</label>
+        action="/upload-dataset" method="post" enctype="multipart/form-data">
+    <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select a zipped file)</label>
     <input class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded"
-           type="file" name="files" multiple />
+           type="file" name="file" multiple />
     <button class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded" type="submit">
       Upload
     </button>
@@ -70,15 +70,14 @@
 </div>
 
 <script>
-  async function triggerJob(endpoint, jobName, extraData = {}) {
+  async function triggerJob(endpoint, jobName, formData) {
     document.getElementById('jobLoading').classList.remove('hidden');
     document.getElementById('metrics').textContent = `${jobName} job running...`;
 
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(extraData)
+        body: formData
       });
       const data = await res.json();
 
@@ -91,12 +90,14 @@
           if (statusData.succeeded > 0) {
             clearInterval(poll);
             document.getElementById('jobLoading').classList.add('hidden');
-            document.getElementById('metrics').textContent = `${jobName} job completed successfully.`;
+            document.getElementById('metrics').textContent =
+              `${jobName} job completed successfully.`;
           }
           if (statusData.failed > 0) {
             clearInterval(poll);
             document.getElementById('jobLoading').classList.add('hidden');
-            document.getElementById('metrics').textContent = `${jobName} job failed.`;
+            document.getElementById('metrics').textContent =
+              `${jobName} job failed.`;
           }
         }, 10000);
       } else {
@@ -109,19 +110,24 @@
     }
   }
 
+  // Preprocess button
   document.getElementById('btnPreprocess').addEventListener('click', (e) => {
     e.preventDefault();
-    triggerJob('/trigger-preprocess', 'preprocess');
+    const formData = new FormData();
+    formData.append("dataset", "aiad_data.zip");  // could make dynamic later
+    formData.append("img_size", document.getElementById('imgsz').value);
+    triggerJob('/trigger-preprocess', 'preprocess', formData);
   });
 
+  // Train button
   document.getElementById('btnTrain').addEventListener('click', (e) => {
     e.preventDefault();
-    triggerJob('/trigger-train', 'train', {
-      base_weights: document.getElementById('baseWeights').value,
-      epochs: document.getElementById('epochs').value,
-      img_size: document.getElementById('imgsz').value,
-      batch: document.getElementById('batch').value
-    });
+    const formData = new FormData();
+    formData.append("base_weights", document.getElementById('yoloModel').value);
+    formData.append("img_size", document.getElementById('imgsz').value);
+    formData.append("epochs", document.getElementById('epochs').value);
+    formData.append("batch", "8");  // could add input field later if needed
+    triggerJob('/trigger-train', 'train', formData);
   });
 </script>
 {% endblock %}

@@ -18,7 +18,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: preprocess
-        image: worker:dev
+        image: localhost/worker:dev
         imagePullPolicy: IfNotPresent
         command: ["python","-m","app.preprocess"]
         envFrom:
@@ -36,5 +36,6 @@ spec:
             memory: "2Gi"
       volumes:
       - name: datasets
-        persistentVolumeClaim:
-          claimName: datasets-pvc
+        hostPath:
+          path: /data            
+          type: Directory

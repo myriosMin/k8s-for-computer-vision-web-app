@@ -66,9 +66,21 @@
 # Quickstart (Essentials)
 
 ### What You Need to Fill In
+
 * Put `aiad_data.zip` under `/data` which includes raw xBD data, partially or full.
 * Put `best.pt` under `/models` to skip model training and do fine-tuning or inferencing.
 * Adjust epochs and pvc sizes as per your intended data input and storage restrictions.
+
+### Pre-installations
+
+* Make sure Docker and Minikube are installed.
+* Start minikube:
+```bash
+minikube start
+minikube addons enable ingress
+minikube addons enable metrics-server
+```
+* Run `minikube mount "ABS/PATH/TO/k8s-for-computer-vision-web-app/data:/data` in a separate terminal.
 
 ### 0. One-Shot Setup (Recommended)
 

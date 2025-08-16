@@ -24,6 +24,7 @@ docker run --rm -p 9000:9000 -v $(pwd)/models:/models -v $(pwd)/output/predictio
 
 # k8s order
 eval $(minikube -p minikube docker-env)
+minikube -p minikube docker-env --shell powershell | Invoke-Expression
 
 ns
 kubectl apply -f k8s/base/namespace.yaml
