@@ -49,10 +49,12 @@ def upload_dataset():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    save_path = os.path.join("/data/raw", file.filename)  # volume mount
+    # os.makedirs("/data/raw", exist_ok=True)
+    save_path = os.path.join("/data/raw", file.filename)
     file.save(save_path)
 
     return jsonify({"status": "ok", "path": save_path}), 200
+    # return redirect(url_for("index"))
 
 # Trigger preprocessing job
 @app.post("/trigger-preprocess")

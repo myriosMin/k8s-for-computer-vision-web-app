@@ -4,15 +4,36 @@
   <h1 class="text-3xl font-semibold text-white mb-6">Data Loading & Training</h1>
 
   <!-- Batch Upload -->
-  <form id="uploadForm"
+  <!-- <form id="uploadForm"
         class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition"
         action="/upload-dataset" method="post" enctype="multipart/form-data">
     <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select a zipped file)</label>
-    <input class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded"
-           type="file" name="file" multiple />
+    <input id="uploadFile" class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded" type="file" name="file" multiple />
     <button class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded" type="submit">
       Upload
+    </button> -->
+
+    <!-- Status message -->
+    <!-- <div id="uploadStatus" class="mt-3 text-sm text-slate-400"></div>
+  </form> -->
+
+  <!-- Batch Upload -->
+  <form id="uploadForm"
+        class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition"
+        action="/upload-dataset" method="post" enctype="multipart/form-data">
+    <label class="block mb-3 text-sm font-medium text-slate-300">
+      Batch upload (drag & drop or select a zipped file)
+    </label>
+    <input id="uploadFile"
+          class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded"
+          type="file" name="file" />
+    <button class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded"
+            type="submit">
+      Upload
     </button>
+
+    <!-- Status message -->
+    <div id="uploadStatus" class="mt-3 text-sm text-slate-400"></div>
   </form>
 
   <!-- Configuration + Results -->
@@ -123,11 +144,44 @@
   document.getElementById('btnTrain').addEventListener('click', (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append("base_weights", document.getElementById('yoloModel').value);
+    formData.append("base_weights", document.getElementById('baseWeights').value);
     formData.append("img_size", document.getElementById('imgsz').value);
     formData.append("epochs", document.getElementById('epochs').value);
     formData.append("batch", "8");  // could add input field later if needed
     triggerJob('/trigger-train', 'train', formData);
+  });
+</script>
+<script>
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+    e.preventDefault(); // prevent full page reload
+    const form = e.target;
+    const formData = new FormData(form);
+
+    const statusDiv = document.getElementById("uploadStatus");
+    statusDiv.textContent = "⏳ Uploading...";
+
+    try {
+      const res = await fetch(form.action, {
+        method: form.method,
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        statusDiv.textContent = `✅ Upload complete: saved to ${data.path}`;
+        statusDiv.classList.remove("text-red-400");
+        statusDiv.classList.add("text-green-400");
+      } else {
+        statusDiv.textContent = `❌ Upload failed: ${data.error || data.message}`;
+        statusDiv.classList.remove("text-green-400");
+        statusDiv.classList.add("text-red-400");
+      }
+    } catch (err) {
+      statusDiv.textContent = `❌ Upload error: ${err}`;
+      statusDiv.classList.remove("text-green-400");
+      statusDiv.classList.add("text-red-400");
+    }
   });
 </script>
 {% endblock %}
