@@ -15,12 +15,19 @@ INFER_IMG  ?= infer:dev
         hpa-on hpa-off tunnel nuke image-clean help
 
 # ======= 0) One-shot happy path =======
-all: build deploy wait url serve  ## Start minikube, build, deploy, wait, print URL
+all: minio build deploy wait url serve  ## Start minikube, build, deploy, wait, print URL
 
 # ======= 1) Cluster/bootstrap =======
 # skipped; done separately
 
 # ======= 2) Build & Deploy =======
+
+minio: ## Deploy MinIO
+	kubectl apply -f k8s/base/minio-namespace.yaml
+	kubectl apply -f k8s/base/minio-secret.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-pvc.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-deployment.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-service.yaml -n $(NS)
 
 build:                    ## Build all images inside Minikube's Docker
 	@echo "Using Minikube Docker daemon so images are visible to the cluster"
