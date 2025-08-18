@@ -2,6 +2,8 @@ import json, re, os, shutil
 from pathlib import Path
 from .common import DATASETS
 import zipfile, tarfile, tempfile
+from minio import Minio
+from urllib.parse import urlparse
 
 CLS_MAP = {"no-damage":0, "minor-damage":1, "major-damage":2, "destroyed":3}
 WKT_RE = re.compile(r"POLYGON\s*\(\(\s*(.*?)\s*\)\)", re.IGNORECASE | re.DOTALL)
@@ -139,19 +141,62 @@ def extract_archive_to_temp(archive_path: Path) -> Path:
 def is_flat_xbd_structure(path: Path) -> bool:
     return (path / "images").exists() and (path / "labels").exists()
 
+def download_from_minio(bucket, object_name, local_path):
+    client = Minio(
+        os.getenv("MINIO_URL", "minio:9000").replace("http://", "").replace("https://", ""),
+        access_key=os.getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        secret_key=os.getenv("MINIO_SECRET_KEY", "minioadmin"),
+        secure=False
+    )
+    print(f"[INFO] Downloading {object_name} from bucket {bucket} → {local_path}")
+    client.fget_object(bucket, object_name, str(local_path))
+    return Path(local_path)
+
+def parse_s3_url(s3_url: str):
+    parsed = urlparse(s3_url)
+    bucket = parsed.netloc
+    key = parsed.path.lstrip("/")
+    return bucket, key
+
 def main():
-    input_path = Path(DATASETS["RAW_ZIP_PATH"])
-    out_root = Path(DATASETS["YOLO_DIR"])
+    raw_zip = DATASETS.get("RAW_ZIP_PATH")
+    if not raw_zip:
+        raise ValueError("RAW_ZIP_PATH not set in DATASETS config")
 
-    if not input_path.exists():
-        raise FileNotFoundError(f"Input path not found: {input_path}")
+    out_root = Path(DATASETS.get("YOLO_DIR", "/tmp/yolo_out"))
+    out_root.mkdir(parents=True, exist_ok=True)
 
-    if input_path.is_file():
-        print(f"[INFO] Processing archive: {input_path.name}")
-        extracted = extract_archive_to_temp(input_path)
+    local_zip = Path("/tmp/raw_dataset.zip")
+
+    # Step 1: Fetch dataset
+    if raw_zip.startswith("s3://"):
+        bucket, key = parse_s3_url(raw_zip)
+        archive_path = download_from_minio(bucket, key, local_zip)
     else:
-        print(f"[INFO] Processing folder: {input_path}")
-        extracted = input_path
+        archive_path = Path(raw_zip)
+        if not archive_path.exists():
+            raise FileNotFoundError(f"Input path not found: {archive_path}")
+
+    # Step 2: Extract archive or use folder
+    if archive_path.is_file():
+        print(f"[INFO] Processing archive: {archive_path.name}")
+        extracted = extract_archive_to_temp(archive_path)
+    else:
+        print(f"[INFO] Processing folder: {archive_path}")
+        extracted = archive_path
+
+    # input_path = Path(DATASETS["RAW_ZIP_PATH"])
+    # out_root = Path(DATASETS["YOLO_DIR"])
+
+    # if not input_path.exists():
+    #     raise FileNotFoundError(f"Input path not found: {input_path}")
+
+    # if input_path.is_file():
+    #     print(f"[INFO] Processing archive: {input_path.name}")
+    #     extracted = extract_archive_to_temp(input_path)
+    # else:
+    #     print(f"[INFO] Processing folder: {input_path}")
+    #     extracted = input_path
 
     # Detect structure
     if is_flat_xbd_structure(extracted):
