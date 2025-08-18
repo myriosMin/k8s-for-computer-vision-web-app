@@ -113,9 +113,13 @@ prepare-data: ## Copy data/aiad_data.zip into datasets-pvc
 	@echo "datasets-pvc is seeded."
 
 job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
-	$(K) delete job/preprocess --ignore-not-found
-	$(K) apply -f k8s/base/job-preprocess.yaml
-	$(K) wait --for=condition=complete job/preprocess --timeout=6h
+# 	$(K) delete job/preprocess --ignore-not-found
+# 	$(K) apply -f k8s/base/job-preprocess.yaml
+# 	$(K) wait --for=condition=complete job/preprocess --timeout=6h
+	kubectl delete job preprocess -n xview --ignore-not-found
+	sleep 2  # small delay ensures deletion finishes
+	kubectl apply -f k8s/base/job-preprocess.yaml -n xview
+# 	kubectl wait --for=condition=complete job/preprocess -n xview --timeout=6h
 	@echo "preprocess complete"
 
 job-train:                ## Run train Job and follow until complete (publishes /models/best.pt)

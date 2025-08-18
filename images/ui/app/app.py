@@ -123,7 +123,8 @@ def trigger_preprocess():
             ["make", "job-preprocess"],
             check=True,
             capture_output=True,
-            text=True
+            text=True,
+            # cwd="/project"
         )
         logging.debug(f"Subprocess stdout: {result.stdout}")
         logging.debug(f"Subprocess stderr: {result.stderr}")

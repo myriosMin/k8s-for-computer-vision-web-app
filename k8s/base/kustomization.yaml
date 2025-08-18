@@ -22,7 +22,11 @@ resources:
   - hpa-ui.yaml
   - hpa-infer.yaml
 
+  - allow-ui-configmap-patch.yaml
+
   - netpol-default-deny.yaml
   - netpol-allow-ui-infer.yaml
   - netpol-egress-dns.yaml
   - netpol-allow-egress-web.yaml
+  - allow-ui-ingress.yaml
+  - allow-preprocess-to-minio.yaml
