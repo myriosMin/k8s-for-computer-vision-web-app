@@ -12,10 +12,10 @@ INFER_IMG  ?= infer:dev
         wait ui infer url serve get desc logs \
         rollout-infer rollout-ui scale-ui scale-infer \
         job-preprocess job-train train-and-reload job-clean \
-        hpa-on hpa-off tunnel nuke image-clean help
+        hpa-on hpa-off tunnel nuke image-clean help seed-minio
 
 # ======= 0) One-shot happy path =======
-all: minio build deploy clear-pv-claim wait url serve  ## Start minikube, build, deploy, wait, print URL
+all: minio build deploy clear-pv-claim wait seed-minio url serve ## Start minikube, build, deploy, wait, print URL
 
 # ======= 1) Cluster/bootstrap =======
 # skipped; done separately
@@ -102,36 +102,42 @@ scale-infer:              ## Scale Infer (e.g., make scale-infer n=3)
 	$(K) scale deploy/infer --replicas=$$n
 
 # ======= 5) Jobs workflow =======
-# Create a temporary pod that mounts the datasets PVC, copy the zip into it, then delete the pod.
-prepare-data: ## Copy data/aiad_data.zip into datasets-pvc
-	@echo "⏳ Seeding datasets-pvc with aiad_data.zip..."
-	kubectl run tmp-copy -n $(NS) --restart=Never --image=busybox -- sleep 3600 \
-	  --overrides='{"spec":{"volumes":[{"name":"datasets","persistentVolumeClaim":{"claimName":"datasets-pvc"}}],"containers":[{"name":"copy","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"datasets","mountPath":"/data"}]}]}}'
-	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=30s
-	kubectl cp data/aiad_data.zip $(NS)/tmp-copy:/data/aiad_data.zip
-	kubectl delete pod tmp-copy -n $(NS)
-	@echo "datasets-pvc is seeded."
+seed-minio: ## Upload data/yolo_xbd/aiad_data.zip into MinIO datasets bucket
+	@echo "Seeding MinIO..."
+	@bash -eux -c '\
+		kubectl -n $(NS) rollout status deploy/minio --timeout=120s; \
+		MC_ENDPOINT="$$(minikube ip):$$(kubectl -n $(NS) get svc minio-service -o jsonpath="{.spec.ports[?(@.port==9000)].nodePort}")"; \
+		if [ -z "$$MC_ENDPOINT" ]; then \
+		  echo "Failed to resolve MinIO endpoint"; exit 1; \
+		fi; \
+		if [ ! -f "data/yolo_xbd/aiad_data.zip" ]; then \
+		  echo "Missing data/yolo_xbd/aiad_data.zip"; exit 1; \
+		fi; \
+		echo "Using MinIO endpoint: $$MC_ENDPOINT"; \
+		mc alias set local "http://$$MC_ENDPOINT" minioadmin minioadmin || { echo "mc: alias set failed"; exit 1; }; \
+		mc mb -p local/datasets || true; \
+		mc cp "data/yolo_xbd/aiad_data.zip" local/datasets/ || { echo "mc: upload failed"; exit 1; }; \
+	'
 
-job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
-# 	$(K) delete job/preprocess --ignore-not-found
-# 	$(K) apply -f k8s/base/job-preprocess.yaml
-# 	$(K) wait --for=condition=complete job/preprocess --timeout=6h
-	kubectl delete job preprocess -n xview --ignore-not-found
-	sleep 2  # small delay ensures deletion finishes
-	kubectl apply -f k8s/base/job-preprocess.yaml -n xview
-# 	kubectl wait --for=condition=complete job/preprocess -n xview --timeout=6h
-	@echo "preprocess complete"
 
-job-train:                ## Run train Job and follow until complete (publishes /models/best.pt)
-	$(K) delete job/train --ignore-not-found
-	$(K) create -f k8s/base/job-train.yaml
+job-preprocess: seed-minio ## Run preprocess job → pulls dataset from MinIO → expands into datasets-pvc
+	@echo "Running preprocess job (fetching aiad_data.zip from MinIO → datasets-pvc)..."
+	$(K) delete job preprocess --ignore-not-found
+	$(K) apply -f k8s/base/job-preprocess.yaml
+	$(K) wait --for=condition=complete job/preprocess --timeout=600s
+	@echo "Preprocess complete. datasets-pvc is populated."
+
+job-train: job-preprocess ## Run training job → consumes datasets-pvc → writes best.pt to models-pvc
+	@echo "Running training job..."
+	$(K) delete job train --ignore-not-found
+	$(K) apply -f k8s/base/job-train.yaml
 	$(K) wait --for=condition=complete job/train --timeout=48h
-	@echo "train complete (best.pt published to /models/best.pt)"
+	@echo "Training complete. best.pt published into models-pvc."
 
-train-and-reload: job-train rollout-infer ui  ## Train → publish best.pt → restart infer → check UI
+train-and-reload: job-train rollout-infer ui ## Train → publish best.pt → restart infer → check UI
 
-job-clean:                ## Remove finished Jobs (TTL also handles this eventually)
-	$(K) delete job/preprocess job/train --ignore-not-found || true
+job-clean: ## Remove finished Jobs (PVCs remain)
+	$(K) delete job preprocess job train --ignore-not-found || true
 
 # ======= 6) HPAs (optional; only if you included the YAMLs) =======
 hpa-on:                   ## Apply autoscalers (UI & Infer)

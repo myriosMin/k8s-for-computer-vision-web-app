@@ -19,7 +19,7 @@ data:
 
   # YOLO hyperparams
   YOLO_MODEL: "yolo11n-seg.pt"    # only for the first-time training; use best.pt for inference and subsequent fine-tuning with new data
-  IMG_SIZE: "1024"
+  IMG_SIZE: "640"
   EPOCHS: "5"
   BATCH: "4"
 
