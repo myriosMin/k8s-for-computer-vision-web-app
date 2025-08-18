@@ -8,3 +8,29 @@ spec:
   resources:
     requests:
       storage: 20Gi
+
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: datasets-pv
+# spec:
+#   capacity:
+#     storage: 20Gi
+#   accessModes:
+#     - ReadWriteOnce
+#   persistentVolumeReclaimPolicy: Retain
+#   hostPath:
+#     path: /mnt/data/datasets   # local path inside Minikube VM
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: datasets-pvc
+#   namespace: xview
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 20Gi
+#   storageClassName: ""   # force bind to our PV

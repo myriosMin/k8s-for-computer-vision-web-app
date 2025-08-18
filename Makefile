@@ -15,12 +15,15 @@ INFER_IMG  ?= infer:dev
         hpa-on hpa-off tunnel nuke image-clean help
 
 # ======= 0) One-shot happy path =======
-all: minio build deploy wait url serve  ## Start minikube, build, deploy, wait, print URL
+all: minio build deploy clear-pv-claim wait url serve  ## Start minikube, build, deploy, wait, print URL
 
 # ======= 1) Cluster/bootstrap =======
 # skipped; done separately
 
 # ======= 2) Build & Deploy =======
+
+clear-pv-claim:
+	kubectl patch pv minio-pv -p '{"spec":{"claimRef": null}}'
 
 minio: ## Deploy MinIO
 	kubectl apply -f k8s/base/minio-namespace.yaml

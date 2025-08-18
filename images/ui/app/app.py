@@ -61,7 +61,7 @@ def inference_page():
     # Page 2: inference
     return render_template("inference.html")
 
-# get file from Minio database
+# upload file to Minio database
 @app.post("/upload-dataset")
 def upload_dataset():
     file = request.files.get("file")
@@ -105,7 +105,7 @@ def upload_dataset():
 @app.post("/trigger-preprocess")
 def trigger_preprocess():
     try:
-        dataset_file = request.form.get("dataset", "aiad_data.zip")
+        dataset_file = request.form.get("dataset", "s3://datasets/aiad_data.zip")
         logging.debug(f"Dataset file: {dataset_file}")
         
         img_size = request.form.get("img_size", "1024")
