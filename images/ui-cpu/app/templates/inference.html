@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-3xl font-semibold text-white mb-6">Inference</h1>
+
+  <!-- Single-Pair Inference -->
+  <form id="inferForm"
+        class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition mb-8"
+        enctype="multipart/form-data">
+    <h2 class="text-xl font-medium text-slate-200 mb-4">Single-Pair Inference</h2>
+
+    <div class="mb-4">
+      <label class="block text-sm text-slate-300 mb-2">Select pre-disaster image</label>
+      <input type="file" name="pre_disaster" accept="image/*"
+             class="w-full border border-slate-600 bg-slate-900 text-white rounded p-2" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm text-slate-300 mb-2">Select post-disaster image</label>
+      <input type="file" name="post_disaster" accept="image/*"
+             class="w-full border border-slate-600 bg-slate-900 text-white rounded p-2" required>
+    </div>
+
+    <button type="submit"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
+      Predict
+    </button>
+  </form>
+
+  <!-- 3-column result display -->
+  <div id="singleResult" class="grid grid-cols-3 gap-4 mb-12">
+    <div class="bg-slate-900 p-2 rounded text-center">
+      <p class="text-slate-300 mb-2">Pre-Disaster</p>
+      <img id="preImg" src="" alt="Pre-Disaster" class="w-full object-contain">
+    </div>
+    <div class="bg-slate-900 p-2 rounded text-center">
+      <p class="text-slate-300 mb-2">Post-Disaster</p>
+      <img id="postImg" src="" alt="Post-Disaster" class="w-full object-contain">
+    </div>
+    <div class="bg-slate-900 p-2 rounded text-center">
+      <p class="text-slate-300 mb-2">Predicted Overlay</p>
+      <img id="overlayImg"
+           src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjUwJSIgeT0iNTAiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIHRleHQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjN2M4Y2FkIj8/PjwvdGV4dD48L3N2Zz4="
+           alt="Overlay" class="w-full object-contain">
+    </div>
+  </div>
+
+  <!-- Batch Inference -->
+  <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
+    <h2 class="text-xl font-medium text-slate-200 mb-4">Batch Inference</h2>
+
+    <!-- Step 1: Upload ZIP file -->
+    <div class="mb-6">
+      <h3 class="text-lg font-medium text-slate-300 mb-3">Upload ZIP file</h3>
+      <div id="batchUploadStatus" class="hidden mb-3 p-2 rounded text-sm"></div>
+      <input id="batchFileInput" type="file" accept=".zip" required
+             class="w-full border border-slate-600 bg-slate-900 text-white rounded p-2 mb-2">
+      <button id="batchUploadBtn" type="button"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded">
+        Upload ZIP File
+      </button>
+    </div>
+
+    <!-- Step 2: Run inference -->
+    <div class="mb-4">
+      <h3 class="text-lg font-medium text-slate-300 mb-3">Run Batch Inference</h3>
+      <p id="uploadedFileName" class="text-slate-400 text-sm mb-2"></p>
+      
+      <!-- Loading bar -->
+      <div id="batchLoading" class="hidden w-full bg-slate-700 rounded h-2 overflow-hidden mb-4">
+        <div class="bg-teal-500 h-2 animate-pulse" style="width: 100%"></div>
+      </div>
+
+      <button id="batchInferBtn" type="button" disabled
+              class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded disabled:bg-gray-600 disabled:cursor-not-allowed">
+        Run Batch Inference
+      </button>
+    </div>
+  </div>
+
+  <!-- Batch result link -->
+  <div id="batchResult" class="mt-4 hidden">
+    <p class="text-slate-300"> Batch inference completed. 
+      <a id="batchDownloadLink" href="#" class="text-indigo-400 underline">Download results</a>
+    </p>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+  // --- Single inference ---
+  document.getElementById('inferForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const preFile = e.target.querySelector('input[name="pre_disaster"]').files[0];
+    const postFile = e.target.querySelector('input[name="post_disaster"]').files[0];
+    if (!preFile || !postFile) return;
+
+    // Show uploaded images immediately
+    document.getElementById('preImg').src = URL.createObjectURL(preFile);
+    document.getElementById('postImg').src = URL.createObjectURL(postFile);
+
+    const fd = new FormData();
+    fd.append('pre_disaster', preFile);
+    fd.append('post_disaster', postFile);
+
+    const res = await fetch('/infer-file', { method: 'POST', body: fd });
+    const json = await res.json();
+
+    if (json.overlay_png_base64) {
+      document.getElementById('overlayImg').src = 'data:image/png;base64,' + json.overlay_png_base64;
+    }
+  });
+
+  // --- Batch inference ---
+  let uploadedFilePath = null;
+  
+  // Batch upload status display
+  function showBatchUploadStatus(message, isError = false) {
+    const statusDiv = document.getElementById('batchUploadStatus');
+    statusDiv.textContent = message;
+    statusDiv.className = `mb-3 p-2 rounded text-sm ${isError ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`;
+    statusDiv.classList.remove('hidden');
+  }
+
+  // Step 1: Upload ZIP file
+  document.getElementById('batchUploadBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('batchFileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+      showBatchUploadStatus('Please select a ZIP file to upload', true);
+      return;
+    }
+
+    if (!file.name.endsWith('.zip')) {
+      showBatchUploadStatus('Please select a ZIP file', true);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadBtn = document.getElementById('batchUploadBtn');
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    
+    try {
+      const response = await fetch('/upload-dataset', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        showBatchUploadStatus(`✓ File "${file.name}" uploaded successfully!`);
+        uploadedFilePath = result.path;
+        document.getElementById('uploadedFileName').textContent = `Uploaded: ${file.name}`;
+        document.getElementById('batchInferBtn').disabled = false;
+      } else {
+        showBatchUploadStatus(`Upload failed: ${result.error}`, true);
+      }
+    } catch (error) {
+      showBatchUploadStatus(`Upload failed: ${error.message}`, true);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload ZIP File';
+    }
+  });
+
+  // Step 2: Run batch inference
+  document.getElementById('batchInferBtn').addEventListener('click', async () => {
+    if (!uploadedFilePath) {
+      alert('Please upload a ZIP file first');
+      return;
+    }
+
+    const batchLoading = document.getElementById('batchLoading');
+    const batchResult = document.getElementById('batchResult');
+    const batchDownloadLink = document.getElementById('batchDownloadLink');
+    
+    batchLoading.classList.remove('hidden');
+    batchResult.classList.add('hidden');
+
+    try {
+      // Call the inference API directly with the uploaded file path
+      const response = await fetch('/batch-infer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          zipfile_path: uploadedFilePath
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.download_url) {
+        batchDownloadLink.href = result.download_url;
+        batchResult.classList.remove('hidden');
+      } else {
+        alert(`Batch inference failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert(`Batch inference failed: ${error.message}`);
+    } finally {
+      batchLoading.classList.add('hidden');
+    }
+  });
+</script>
+{% endblock %}

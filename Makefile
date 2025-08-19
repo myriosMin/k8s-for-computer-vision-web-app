@@ -2,20 +2,30 @@ SHELL := /bin/bash
 NS ?= xview
 K  := kubectl -n $(NS)
 KUSTOMIZE_DIR ?= k8s/dev
+KUSTOMIZE_DIR_CPU ?= k8s/cpu
 
 # ------- Image tags (override after pushing to a registry) -------
 UI_IMG     ?= ui:dev
 WORKER_IMG ?= worker:dev
 INFER_IMG  ?= infer:dev
 
+# CPU-only image tags
+UI_CPU_IMG     ?= ui:cpu
+WORKER_CPU_IMG ?= worker:cpu
+INFER_CPU_IMG  ?= infer:cpu
+
 .PHONY: all build deploy redeploy undeploy down \
         wait ui infer url serve get desc logs \
         rollout-infer rollout-ui scale-ui scale-infer \
         job-preprocess job-train train-and-reload job-clean \
-        hpa-on hpa-off tunnel nuke image-clean help seed-minio
+        hpa-on hpa-off tunnel nuke image-clean help \
+        build-cpu deploy-cpu redeploy-cpu cpu-all
 
 # ======= 0) One-shot happy path =======
 all: minio build deploy clear-pv-claim wait seed-minio url serve ## Start minikube, build, deploy, wait, print URL
+
+# CPU-only lightweight deployment for testing
+cpu-all: build-cpu deploy-cpu-infrastructure prepare-data-cpu deploy-cpu-services wait url serve  ## Start minikube, build CPU images, deploy infrastructure, prepare data, deploy services, wait, print URL
 
 # ======= 1) Cluster/bootstrap =======
 # skipped; done separately
@@ -38,11 +48,34 @@ build:                    ## Build all images inside Minikube's Docker
 	minikube image build -t localhost/$(WORKER_IMG) images/worker
 	minikube image build -t localhost/$(INFER_IMG)  images/infer
 
+build-cpu:                ## Build CPU-only images inside Minikube's Docker (lightweight)
+	@echo "Building CPU-only images for lightweight testing"
+	minikube image build -t localhost/$(UI_CPU_IMG)     images/ui-cpu
+	minikube image build -t localhost/$(WORKER_CPU_IMG) images/worker-cpu
+	minikube image build -t localhost/$(INFER_CPU_IMG)  images/infer-cpu
+
 deploy:                   ## Apply all manifests (Kustomize overlay)
 	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
 	kubectl apply -k $(KUSTOMIZE_DIR)
 
+deploy-cpu:               ## Apply CPU-only manifests (lightweight for testing)
+	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
+	- kubectl delete job preprocess train -n $(NS) --ignore-not-found=true
+	kubectl apply -k k8s/cpu
+
+deploy-cpu-infrastructure: ## Deploy only storage and config first  
+	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
+	- kubectl delete job preprocess train -n $(NS) --ignore-not-found=true
+	kubectl apply -f k8s/base/namespace.yaml
+	kubectl apply -f k8s/base/configmap-app.yaml -f k8s/base/secret-app.yaml
+	kubectl apply -f k8s/base/pvc-datasets.yaml -f k8s/base/pvc-models.yaml -f k8s/base/pvc-outputs.yaml
+
+deploy-cpu-services:      ## Deploy services and deployments after data preparation
+	kubectl apply -k $(KUSTOMIZE_DIR_CPU)
+
 redeploy: build deploy wait url  ## Rebuild images, reapply, and wait
+
+redeploy-cpu: build-cpu deploy-cpu wait url  ## Rebuild CPU images, reapply lightweight setup, and wait
 
 undeploy:                 ## Delete all resources from overlay
 	kubectl delete -k $(KUSTOMIZE_DIR) --ignore-not-found
@@ -102,27 +135,29 @@ scale-infer:              ## Scale Infer (e.g., make scale-infer n=3)
 	$(K) scale deploy/infer --replicas=$$n
 
 # ======= 5) Jobs workflow =======
-seed-minio: ## Upload data/yolo_xbd/aiad_data.zip into MinIO datasets bucket
-	@echo "Seeding MinIO..."
-	@bash -eux -c '\
-		kubectl -n $(NS) rollout status deploy/minio --timeout=120s; \
-		MC_ENDPOINT="$$(minikube ip):$$(kubectl -n $(NS) get svc minio-service -o jsonpath="{.spec.ports[?(@.port==9000)].nodePort}")"; \
-		if [ -z "$$MC_ENDPOINT" ]; then \
-		  echo "Failed to resolve MinIO endpoint"; exit 1; \
-		fi; \
-		if [ ! -f "data/yolo_xbd/aiad_data.zip" ]; then \
-		  echo "Missing data/yolo_xbd/aiad_data.zip"; exit 1; \
-		fi; \
-		echo "Using MinIO endpoint: $$MC_ENDPOINT"; \
-		mc alias set local "http://$$MC_ENDPOINT" minioadmin minioadmin || { echo "mc: alias set failed"; exit 1; }; \
-		mc mb -p local/datasets || true; \
-		mc cp "data/yolo_xbd/aiad_data.zip" local/datasets/ || { echo "mc: upload failed"; exit 1; }; \
-	'
+# Create a temporary pod that mounts the datasets PVC, copy the zip into it, then delete the pod.
+prepare-data: ## Copy data/aiad_data.zip into datasets-pvc
+	@echo "⏳ Seeding datasets-pvc with aiad_data.zip..."
+	kubectl run tmp-copy -n $(NS) --restart=Never --image=busybox -- sleep 3600 \
+	  --overrides='{"spec":{"volumes":[{"name":"datasets","persistentVolumeClaim":{"claimName":"datasets-pvc"}}],"containers":[{"name":"copy","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"datasets","mountPath":"/data"}]}]}}'
+	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=30s
+	kubectl cp data/aiad_data.zip $(NS)/tmp-copy:/data/aiad_data.zip
+	kubectl delete pod tmp-copy -n $(NS)
+	@echo "datasets-pvc is seeded."
 
+# CPU-specific lightweight data preparation (smaller dataset)
+prepare-data-cpu: ## Copy initial model for CPU deployment
+	@echo "⏳ Preparing models-pvc with initial best.pt for CPU deployment..."
+	kubectl run tmp-copy -n $(NS) --restart=Never --image=busybox \
+	  --overrides='{"spec":{"volumes":[{"name":"models","persistentVolumeClaim":{"claimName":"models-pvc"}}],"containers":[{"name":"copy","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"models","mountPath":"/models"}]}]}}' \
+	  -- sleep 3600
+	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=60s
+	kubectl cp models/best.pt $(NS)/tmp-copy:/models/best.pt
+	kubectl delete pod tmp-copy -n $(NS)
+	@echo "models-pvc is seeded with best.pt for inference."
 
-job-preprocess: seed-minio ## Run preprocess job → pulls dataset from MinIO → expands into datasets-pvc
-	@echo "Running preprocess job (fetching aiad_data.zip from MinIO → datasets-pvc)..."
-	$(K) delete job preprocess --ignore-not-found
+job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
+	$(K) delete job/preprocess --ignore-not-found
 	$(K) apply -f k8s/base/job-preprocess.yaml
 	$(K) wait --for=condition=complete job/preprocess --timeout=600s
 	@echo "Preprocess complete. datasets-pvc is populated."
@@ -139,7 +174,7 @@ train-and-reload: job-train rollout-infer ui ## Train → publish best.pt → re
 job-clean: ## Remove finished Jobs (PVCs remain)
 	$(K) delete job preprocess job train --ignore-not-found || true
 
-# ======= 6) HPAs (optional; only if you included the YAMLs) =======
+# ======= 6) HPAs =======
 hpa-on:                   ## Apply autoscalers (UI & Infer)
 	-kubectl apply -f k8s/base/hpa-ui.yaml
 	-kubectl apply -f k8s/base/hpa-infer.yaml
@@ -165,6 +200,9 @@ image-clean: ## Delete built images from Minikube
 	minikube ssh -- docker rmi -f localhost/$(UI_IMG)     || true
 	minikube ssh -- docker rmi -f localhost/$(WORKER_IMG) || true
 	minikube ssh -- docker rmi -f localhost/$(INFER_IMG)  || true
+	minikube ssh -- docker rmi -f localhost/$(UI_CPU_IMG)     || true
+	minikube ssh -- docker rmi -f localhost/$(WORKER_CPU_IMG) || true
+	minikube ssh -- docker rmi -f localhost/$(INFER_CPU_IMG)  || true
 
 # HELP
 help:                     ## Show help

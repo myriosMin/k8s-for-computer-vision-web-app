@@ -16,15 +16,21 @@ data:
   MODELS_DIR: "/models"
   MODEL_PATH: "/models/best.pt"          # fixed location used by infer
   BASE_WEIGHTS: "yolo11n-seg.pt"         # fallback if best.pt not present
+  ACTIVE_MODEL: "yolo11n-seg.pt"        # currently active model (use base model for stability)
+  TRAFFIC_PERCENTAGE: "100"              # percentage of traffic to new model
 
-  # YOLO hyperparams
-  YOLO_MODEL: "yolo11n-seg.pt"    # only for the first-time training; use best.pt for inference and subsequent fine-tuning with new data
-  IMG_SIZE: "640"
-  EPOCHS: "5"
-  BATCH: "4"
+  # YOLO hyperparams (optimized for CPU/memory constraints)
+  YOLO_MODEL: "yolo11n-seg.pt"    # base model for training
+  IMG_SIZE: "640"                 # reduced for memory constraints
+  EPOCHS: "1"
+  BATCH: "2"                      # reduced for memory constraints
+  MODEL_NAME: "default"                  # name for trained models
+  IS_FINETUNING: "false"                 # whether this is fine-tuning or new training
 
-  # === UI -> where batch uploads land ===
+  # === UI Configuration ===
   DATASET_MOUNT: "/data/raw"
-
-  # === UI -> where UI reaches infer Service ===
   INFER_URL: "http://infer:9000"
+  SECRET_KEY: "your-super-secret-key-change-in-production"
+  ADMIN_USERNAME: "admin"
+  ADMIN_PASSWORD: "admin123"
+           # local storage only

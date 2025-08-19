@@ -102,12 +102,19 @@ def main():
     model_path = os.getenv("MODEL_PATH", "/models/best.pt")
     base_weights = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
     data_yaml = os.getenv("DATA_YAML", str(root / "xbd6.yaml"))
-    epochs = int(os.getenv("EPOCHS", "1"))
-    imgsz = int(os.getenv("IMG_SIZE", "640"))
-    batch = int(os.getenv("BATCH", "2"))
+    epochs = int(os.getenv("EPOCHS", "10"))
+    imgsz = int(os.getenv("IMG_SIZE", "1024"))
+    batch = int(os.getenv("BATCH", "8"))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"[env] model={model_path}, data={data_yaml}, epochs={epochs}, img={imgsz}, batch={batch}, device={device}")
+    
+    # Print model info for better UI display
+    if Path(model_path).exists():
+        print(f"[model] Loading existing model from {model_path}")
+    else:
+        print(f"[model] Starting with base weights: {base_weights}")
+        model_path = base_weights
 
     # Prepare custom pairing
     train_pairs = load_pairs(root / "train_pairs.csv")
@@ -147,6 +154,16 @@ def main():
         exist_ok=True
     )
     print(f"[done] Results saved at {results.save_dir}")
+    
+    # Print final metrics for UI parsing
+    if hasattr(results, 'results_dict') and results.results_dict:
+        metrics = results.results_dict
+        print(f"[metrics] Final training metrics:")
+        for key, value in metrics.items():
+            if isinstance(value, (int, float)):
+                print(f"[metrics] {key}: {value}")
+    
+    print(f"[training] Training complete after {epochs} epochs")
     
     best = Path(results.save_dir) / "weights" / "best.pt"
     pub = Path(os.getenv("MODELS_DIR", "/models")) / "best.pt"

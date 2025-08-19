@@ -65,6 +65,43 @@
 
 # Quickstart (Essentials)
 
+## Cross-Platform Compatibility
+
+### Windows Users
+
+This project is now fully compatible with Windows. You have several options:
+
+**Option 1: Git Bash (Recommended)**
+- Install [Git for Windows](https://git-scm.com/download/win) which includes Git Bash
+- Use Git Bash terminal for all commands
+- Run commands normally: `make cpu-all`
+
+**Option 2: WSL (Windows Subsystem for Linux)**
+- Install WSL2 with Ubuntu
+- Install make: `sudo apt install make`
+- Use WSL terminal for all commands
+
+**Option 3: PowerShell with make**
+- Install make for Windows (via Chocolatey: `choco install make`)
+- Use PowerShell terminal
+- May need to escape quotes differently in some commands
+
+**Option 4: Docker Desktop with WSL2 Backend**
+- Install Docker Desktop for Windows
+- Enable WSL2 integration
+- Use WSL2 terminal
+
+### Cross-Platform Path Handling
+
+The Makefile automatically detects your operating system and uses the correct path separators:
+- Windows: Uses `\` for file paths
+- Linux/macOS: Uses `/` for file paths
+
+Test your platform setup:
+```bash
+make test-paths
+```
+
 ### What You Need to Fill In
 
 * Put `aiad_data.zip` under `/data` which includes raw xBD data, partially or full.
@@ -90,6 +127,23 @@ For the full pipeline — start Minikube, enable addons, build images, deploy, w
 make all
 ```
 
+### 0.1. Lightweight CPU-Only Setup (For Testing)
+
+For a lightweight, CPU-only deployment with minimal resource requirements (perfect for testing and development):
+
+```bash
+make cpu-all
+```
+
+**Benefits of CPU deployment:**
+- **Faster builds**: No CUDA dependencies, smaller images
+- **Minimal storage**: 2Gi datasets, 1Gi models, 1Gi outputs (vs 20Gi/5Gi/10Gi)
+- **Lower resources**: 50m CPU UI, 100m CPU inference (vs 100m/250m)
+- **Quick iteration**: Perfect for development and CI/CD
+- **Cost effective**: Runs on any machine with minikube
+
+See `k8s/cpu/README.md` for detailed CPU deployment documentation.
+
 (*`make all` is an alias for `make init` in the Makefile.*)
 
 ---
@@ -107,10 +161,20 @@ make addons
 make build
 ```
 
+**For CPU-only lightweight builds:**
+```bash
+make build-cpu
+```
+
 ### 3. Deploy Everything (Namespace, PVCs, UI, Inference, Ingress)
 
 ```bash
 make deploy
+```
+
+**For CPU-only lightweight deployment:**
+```bash
+make deploy-cpu
 ```
 
 ### 4. Add Host Entry
@@ -131,6 +195,13 @@ Upload raw **xBD** files on the **"Data & Training"** page. Then run:
 ```bash
 make job-preprocess
 make job-train   # trains, saves runs and best.pt under /models
+```
+
+**For CPU deployment with minimal test data:**
+```bash
+make prepare-data-cpu  # Uses smaller test dataset
+make job-preprocess
+make job-train         # Will be slower on CPU but uses same training logic
 ```
 
 ### 7. Link Trained Weights to Inference Deployment
