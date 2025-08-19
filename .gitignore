@@ -13,8 +13,8 @@ out/
 .LSOverride
 .Trashes
 
-# Ignore MC
-mc
+#  Ignore MC file in main dierectory
+*.mc
 
 # Vim
 *~
