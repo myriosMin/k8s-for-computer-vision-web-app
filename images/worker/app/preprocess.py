@@ -73,8 +73,8 @@ def convert_split(xbd_split_root: Path, out_root: Path, split_name: str):
                     pre_path = v; break
             if pre_path: break
 
-        W = int(meta.get("width", meta.get("original_width", 1024)))
-        H = int(meta.get("height", meta.get("original_height", 1024)))
+        W = int(meta.get("width", meta.get("original_width", 640)))
+        H = int(meta.get("height", meta.get("original_height", 640)))
 
         # write YOLO polygons with damage class id
         lines = []

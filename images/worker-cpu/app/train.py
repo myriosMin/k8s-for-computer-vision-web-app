@@ -103,7 +103,7 @@ def main():
     base_weights = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
     data_yaml = os.getenv("DATA_YAML", str(root / "xbd6.yaml"))
     epochs = int(os.getenv("EPOCHS", "10"))
-    imgsz = int(os.getenv("IMG_SIZE", "1024"))
+    imgsz = int(os.getenv("IMG_SIZE", "640"))
     batch = int(os.getenv("BATCH", "8"))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
