@@ -31,7 +31,7 @@ spec:
         fsGroup: 2000
       containers:
       - name: ui
-        image: localhost/ui:enhanced
+        image: localhost/ui:cpu
         imagePullPolicy: IfNotPresent
         ports: 
         - containerPort: 8000

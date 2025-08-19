@@ -7,16 +7,6 @@ data:
   # Namespace 
   NAMESPACE: "xview"
 
-  # === MinIO Configuration ===
-  MINIO_ENDPOINT: "minio:9000"
-  MINIO_ACCESS_KEY: "xview-app"
-  MINIO_SECRET_KEY: "xview-app-secret-key"
-
-  # === Redis Configuration ===
-  REDIS_HOST: "redis"
-  REDIS_PORT: "6379"
-  REDIS_PASSWORD: "redis123"
-
   # === Worker (preprocess/train) ===
   RAW_ZIP_PATH: "/data/aiad_data.zip"          # can also be "/data/raw" (folder, unzipped)
   YOLO_DIR: "/data/yolo_xbd"
@@ -41,9 +31,4 @@ data:
   SECRET_KEY: "your-super-secret-key-change-in-production"
   ADMIN_USERNAME: "admin"
   ADMIN_PASSWORD: "admin123"
-
-  # === Enhanced Features ===
-  ENABLE_AUTHENTICATION: "true"
-  ENABLE_MODEL_VERSIONING: "true"
-  ENABLE_BATCH_PROCESSING: "true"
-  STORAGE_BACKEND: "minio"              # local, minio
+           # local storage only

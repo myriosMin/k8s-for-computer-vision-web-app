@@ -5,7 +5,6 @@ resources:
   - namespace.yaml
   - configmap-app.yaml
   - secret-app.yaml
-  - secret-minio.yaml
   - rbac-ui.yaml
   
   # Storage
@@ -16,8 +15,6 @@ resources:
   # Core Services
   - deploy-ui.yaml
   - deploy-infer.yaml
-  - deploy-minio.yaml
-  - deploy-redis.yaml
   - ingress.yaml
 
   # Jobs (removed from auto-deployment - triggered via UI)
@@ -29,6 +26,3 @@ resources:
   - pdb-infer.yaml
   - hpa-ui.yaml
   - hpa-infer.yaml
-
-  # Network Security
-  - netpol-enhanced.yaml

@@ -7,7 +7,6 @@ resources:
   - ../base/namespace.yaml
   - ../base/configmap-app.yaml
   - ../base/secret-app.yaml
-  - ../base/secret-minio.yaml
   
   # Storage
   - ../base/pvc-datasets.yaml

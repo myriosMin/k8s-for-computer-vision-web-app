@@ -43,12 +43,6 @@ build-cpu:                ## Build CPU-only images inside Minikube's Docker (lig
 	minikube image build -t localhost/worker:cpu images/worker-cpu
 	minikube image build -t localhost/infer:cpu  images/infer-cpu
 
-build-enhanced:           ## Build enhanced images with MinIO and authentication support
-	@echo "Building enhanced images with full features"
-	minikube image build -t localhost/ui:enhanced     images/ui-enhanced
-	minikube image build -t localhost/worker:enhanced images/worker-enhanced
-	minikube image build -t localhost/infer:enhanced  images/infer-enhanced
-
 deploy:                   ## Apply all manifests (Kustomize overlay)
 	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
 	kubectl apply -k $(KUSTOMIZE_DIR)
@@ -63,7 +57,7 @@ deploy-cpu-infrastructure: ## Deploy only storage and config first
 	- kubectl delete job preprocess train -n $(NS) --ignore-not-found=true
 	# Deploy infrastructure components first
 	kubectl apply -f k8s/base/namespace.yaml
-	kubectl apply -f k8s/base/configmap-app.yaml -f k8s/base/secret-app.yaml -f k8s/base/secret-minio.yaml
+	kubectl apply -f k8s/base/configmap-app.yaml -f k8s/base/secret-app.yaml
 	kubectl apply -f k8s/base/pvc-datasets.yaml -f k8s/base/pvc-models.yaml -f k8s/base/pvc-outputs.yaml
 
 deploy-cpu-services:      ## Deploy services and deployments after data preparation
@@ -153,18 +147,6 @@ prepare-data-cpu: ## Copy initial model for CPU deployment
 	kubectl delete pod tmp-copy -n $(NS)
 	@echo "models-pvc is seeded with best.pt for inference."
 
-# Initialize MinIO with buckets and demo data
-init-minio: ## Initialize MinIO with required buckets and demo user
-	@echo "⏳ Initializing MinIO..."
-	$(K) wait --for=condition=ready pod -l app=minio --timeout=300s
-	@echo "Creating MinIO user and buckets..."
-	kubectl run minio-init -n $(NS) --restart=Never --image=minio/mc:latest --rm -i --tty -- sh -c '\
-		mc alias set xview http://minio:9000 admin minio123 && \
-		mc admin user add xview xview-app xview-app-secret-key && \
-		mc admin policy attach xview readwrite --user xview-app && \
-		mc mb xview/datasets xview/models xview/predictions xview/batch-uploads 2>/dev/null || true && \
-		echo "MinIO initialized successfully"'
-
 job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
 	$(K) delete job/preprocess --ignore-not-found
 	$(K) apply -f k8s/base/job-preprocess.yaml
@@ -182,7 +164,7 @@ train-and-reload: job-train rollout-infer ui  ## Train → publish best.pt → r
 job-clean:                ## Remove finished Jobs (TTL also handles this eventually)
 	$(K) delete job/preprocess job/train --ignore-not-found || true
 
-# ======= 6) HPAs (optional; only if you included the YAMLs) =======
+# ======= 6) HPAs =======
 hpa-on:                   ## Apply autoscalers (UI & Infer)
 	-kubectl apply -f k8s/base/hpa-ui.yaml
 	-kubectl apply -f k8s/base/hpa-infer.yaml
