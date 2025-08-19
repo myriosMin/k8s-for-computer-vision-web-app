@@ -108,6 +108,13 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print(f"[env] model={model_path}, data={data_yaml}, epochs={epochs}, img={imgsz}, batch={batch}, device={device}")
+    
+    # Print model info for better UI display
+    if Path(model_path).exists():
+        print(f"[model] Loading existing model from {model_path}")
+    else:
+        print(f"[model] Starting with base weights: {base_weights}")
+        model_path = base_weights
 
     # Prepare custom pairing
     train_pairs = load_pairs(root / "train_pairs.csv")
@@ -147,6 +154,16 @@ def main():
         exist_ok=True
     )
     print(f"[done] Results saved at {results.save_dir}")
+    
+    # Print final metrics for UI parsing
+    if hasattr(results, 'results_dict') and results.results_dict:
+        metrics = results.results_dict
+        print(f"[metrics] Final training metrics:")
+        for key, value in metrics.items():
+            if isinstance(value, (int, float)):
+                print(f"[metrics] {key}: {value}")
+    
+    print(f"[training] Training complete after {epochs} epochs")
     
     best = Path(results.save_dir) / "weights" / "best.pt"
     pub = Path(os.getenv("MODELS_DIR", "/models")) / "best.pt"

@@ -320,7 +320,7 @@ def upload_dataset():
 def trigger_preprocess():
     try:
         dataset_file = request.form.get("dataset", "aiad_data.zip")
-        img_size = request.form.get("img_size", "1024")
+        img_size = "1024"  # Fixed image size for consistency
 
         # Build the full path for the uploaded dataset
         if not dataset_file.startswith("/data/"):
@@ -353,9 +353,12 @@ def trigger_preprocess():
 @app.post("/trigger-train")
 def trigger_train():
     try:
-        base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
+        # For fine-tuning, use fixed values for model and image size
+        base_weights = "/models/best.pt"  # Use existing fine-tuned model
+        img_size = "1024"  # Fixed to match training data
+        
+        # Get user-configurable parameters
         epochs = request.form.get("epochs", "10")
-        img_size = request.form.get("img_size", "1024")
         batch = request.form.get("batch", "8")
 
         # Update configmap with training parameters
@@ -373,7 +376,7 @@ def trigger_train():
             "status": "ok", 
             "message": "Training job started successfully",
             "config": {
-                "base_weights": base_weights,
+                "model": "best.pt (fine-tuning)",
                 "epochs": epochs,
                 "img_size": img_size,
                 "batch": batch
@@ -441,6 +444,8 @@ def job_logs(jobname):
         results = {"logs": logs}
         if jobname == "preprocess":
             results["preprocess_summary"] = parse_preprocess_logs(logs)
+        elif jobname == "train":
+            results["training_summary"] = parse_training_logs(logs)
         
         return jsonify(results)
         
@@ -488,6 +493,120 @@ def parse_preprocess_logs(logs):
             
     except Exception:
         summary["status"] = "parse_error"
+    
+    return summary
+
+def parse_training_logs(logs):
+    """
+    Parse YOLO training logs to extract metrics and model information.
+    """
+    import re
+    
+    summary = {
+        "status": "unknown",
+        "epochs_completed": 0,
+        "total_epochs": 0,
+        "final_metrics": {},
+        "best_metrics": {},
+        "model_info": {},
+        "training_config": {},
+        "model_path": None,
+        "published_path": None
+    }
+    
+    try:
+        lines = logs.split('\n')
+        
+        # Extract training configuration
+        for line in lines:
+            # Parse environment config
+            env_match = re.search(r'\[env\] model=(.+?), data=(.+?), epochs=(\d+), img=(\d+), batch=(\d+), device=(.+)', line)
+            if env_match:
+                summary["training_config"] = {
+                    "model": env_match.group(1),
+                    "data": env_match.group(2), 
+                    "total_epochs": int(env_match.group(3)),
+                    "image_size": int(env_match.group(4)),
+                    "batch_size": int(env_match.group(5)),
+                    "device": env_match.group(6)
+                }
+                summary["total_epochs"] = int(env_match.group(3))
+                
+            # Parse model info
+            if "Model summary:" in line:
+                # Look for model parameters in following lines
+                for i, next_line in enumerate(lines[lines.index(line):lines.index(line)+10]):
+                    param_match = re.search(r'(\d+) parameters', next_line)
+                    if param_match:
+                        summary["model_info"]["parameters"] = int(param_match.group(1))
+                    layer_match = re.search(r'(\d+) layers', next_line)
+                    if layer_match:
+                        summary["model_info"]["layers"] = int(layer_match.group(1))
+            
+            # Parse epoch results - look for patterns like:
+            # Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+            # 1/10      1.2G      1.234      0.567      0.890        120        640
+            epoch_match = re.search(r'^\s*(\d+)/(\d+)\s+[\d.]+G?\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', line.strip())
+            if epoch_match:
+                epoch_num = int(epoch_match.group(1))
+                total_epochs = int(epoch_match.group(2))
+                box_loss = float(epoch_match.group(3))
+                cls_loss = float(epoch_match.group(4))
+                dfl_loss = float(epoch_match.group(5))
+                
+                summary["epochs_completed"] = max(summary["epochs_completed"], epoch_num)
+                summary["total_epochs"] = total_epochs
+                summary["final_metrics"] = {
+                    "box_loss": box_loss,
+                    "cls_loss": cls_loss,
+                    "dfl_loss": dfl_loss,
+                    "total_loss": box_loss + cls_loss + dfl_loss
+                }
+                
+            # Parse validation results - look for mAP values
+            # val: Class     Images  Instances      Box(P          R      mAP50  mAP50-95):
+            # val: all        123       456      0.789      0.654      0.721     0.432
+            val_match = re.search(r'val:\s+all\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', line)
+            if val_match:
+                summary["final_metrics"].update({
+                    "val_images": int(val_match.group(1)),
+                    "val_instances": int(val_match.group(2)),
+                    "precision": float(val_match.group(3)),
+                    "recall": float(val_match.group(4)),
+                    "mAP50": float(val_match.group(5)),
+                    "mAP50_95": float(val_match.group(6))
+                })
+                
+            # Parse results directory
+            results_match = re.search(r'\[done\] Results saved at (.+)', line)
+            if results_match:
+                summary["model_info"]["results_dir"] = results_match.group(1).strip()
+                summary["model_path"] = f"{results_match.group(1).strip()}/weights/best.pt"
+                
+            # Parse published model path
+            publish_match = re.search(r'\[publish\] Copied best weight to (.+)', line)
+            if publish_match:
+                summary["published_path"] = publish_match.group(1).strip()
+                
+            # Check for completion or errors
+            if "[done] Results saved at" in line:
+                summary["status"] = "completed"
+            elif "RuntimeError" in line or "ERROR" in line.upper() or "FAILED" in line.upper():
+                summary["status"] = "error"
+            elif "Training complete" in line or "[publish] Copied best weight to" in line:
+                summary["status"] = "success"
+                
+        # Set best metrics same as final if we have final metrics
+        if summary["final_metrics"]:
+            summary["best_metrics"] = summary["final_metrics"].copy()
+            
+        # If no explicit status was found but we have metrics, assume completed
+        if summary["status"] == "unknown" and summary["epochs_completed"] > 0:
+            summary["status"] = "completed"
+            
+    except Exception as e:
+        summary["status"] = "parse_error"
+        summary["error"] = str(e)
     
     return summary
 

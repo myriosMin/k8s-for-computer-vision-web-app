@@ -142,7 +142,6 @@ prepare-data-cpu: ## Copy initial model for CPU deployment
 	  --overrides='{"spec":{"volumes":[{"name":"models","persistentVolumeClaim":{"claimName":"models-pvc"}}],"containers":[{"name":"copy","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"models","mountPath":"/models"}]}]}}' \
 	  -- sleep 3600
 	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=60s
-	# Copy the trained model for inference
 	kubectl cp models/best.pt $(NS)/tmp-copy:/models/best.pt
 	kubectl delete pod tmp-copy -n $(NS)
 	@echo "models-pvc is seeded with best.pt for inference."

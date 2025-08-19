@@ -19,30 +19,24 @@
   <div class="grid md:grid-cols-2 gap-6 mt-8">
     <!-- Model Config -->
     <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
-      <h2 class="text-xl font-semibold text-white mb-4">Model Configuration</h2>
+      <h2 class="text-xl font-semibold text-white mb-4">Training Configuration</h2>
 
-      <label class="block text-sm text-slate-400 mb-1">Base Weights (first training only)</label>
-      <select id="baseWeights"
-              class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-2">
-        <option>yolo11n-seg.pt</option>
-        <option>yolo11m-seg.pt</option>
-        <option>yolo11l-seg.pt</option>
-      </select>
-      <p class="text-xs text-slate-500 mb-4">
-        Only used for the first training run. Subsequent training uses <code>best.pt</code> from the last run.
-      </p>
-
-      <label class="block text-sm text-slate-400 mb-1">Image Size (imgsz)</label>
-      <input id="imgsz" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
-             type="number" value="1024" />
+      <div class="mb-4 p-3 bg-slate-700 rounded-lg">
+        <p class="text-sm text-slate-300 mb-2">
+          <strong>Model:</strong> Fine-tuning existing <code class="text-blue-400">best.pt</code> model
+        </p>
+        <p class="text-sm text-slate-300">
+          <strong>Image Size:</strong> Fixed at <code class="text-blue-400">640px</code> (matches training data)
+        </p>
+      </div>
 
       <label class="block text-sm text-slate-400 mb-1">Epochs</label>
       <input id="epochs" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
-             type="number" value="10" />
+             type="number" value="10" min="1" max="100" />
 
       <label class="block text-sm text-slate-400 mb-1">Batch Size</label>
       <input id="batch" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-6"
-             type="number" value="8" />
+             type="number" value="8" min="1" max="32" />
 
       <div class="flex flex-wrap gap-3">
         <button id="btnPreprocess" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
@@ -157,6 +151,20 @@
               } catch (err) {
                 document.getElementById('metrics').textContent = 'Preprocess job completed successfully.';
               }
+            } else if (jobName === 'train') {
+              // Handle training job completion with metrics
+              try {
+                const logsRes = await fetch(`/job-logs/${jobName}`);
+                const logsData = await logsRes.json();
+                
+                if (logsData.training_summary) {
+                  displayTrainingResults(logsData.training_summary);
+                } else {
+                  document.getElementById('metrics').textContent = 'Training job completed successfully.';
+                }
+              } catch (err) {
+                document.getElementById('metrics').textContent = 'Training job completed successfully.';
+              }
             } else {
               document.getElementById('metrics').textContent = `${jobName} job completed successfully.`;
             }
@@ -211,6 +219,123 @@
     }
   }
 
+  function displayTrainingResults(summary) {
+    const metricsDiv = document.getElementById('metrics');
+    
+    if (summary.status === 'success' || summary.status === 'completed') {
+      let html = '<div class="training-results">';
+      html += '<h4 class="text-lg font-semibold text-green-600 mb-3">🎯 Training Completed Successfully</h4>';
+      
+      // Training Configuration
+      if (summary.training_config) {
+        html += '<div class="mb-4 p-3 bg-slate-700 rounded-lg">';
+        html += '<h5 class="font-medium text-white mb-2">📋 Training Configuration</h5>';
+        html += '<div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-slate-300">';
+        html += `<div>Epochs: <span class="text-white font-medium">${summary.training_config.total_epochs || 'N/A'}</span></div>`;
+        html += `<div>Image Size: <span class="text-white font-medium">${summary.training_config.image_size || 'N/A'}</span></div>`;
+        html += `<div>Batch Size: <span class="text-white font-medium">${summary.training_config.batch_size || 'N/A'}</span></div>`;
+        html += `<div>Device: <span class="text-white font-medium">${summary.training_config.device || 'N/A'}</span></div>`;
+        html += `<div>Model: <span class="text-white font-medium">${summary.training_config.model || 'N/A'}</span></div>`;
+        html += '</div></div>';
+      }
+      
+      // Training Progress
+      if (summary.epochs_completed > 0) {
+        html += '<div class="mb-4 p-3 bg-slate-700 rounded-lg">';
+        html += '<h5 class="font-medium text-white mb-2">📈 Training Progress</h5>';
+        html += `<div class="text-sm text-slate-300">Completed: <span class="text-white font-medium">${summary.epochs_completed}/${summary.total_epochs} epochs</span></div>`;
+        if (summary.epochs_completed === summary.total_epochs) {
+          html += '<div class="text-xs text-green-400 mt-1">✅ All epochs completed</div>';
+        }
+        html += '</div>';
+      }
+      
+      // Final Metrics
+      if (summary.final_metrics && Object.keys(summary.final_metrics).length > 0) {
+        html += '<div class="mb-4 p-3 bg-slate-700 rounded-lg">';
+        html += '<h5 class="font-medium text-white mb-2">📊 Final Metrics</h5>';
+        html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">';
+        
+        if (summary.final_metrics.mAP50 !== undefined) {
+          html += `<div class="text-center p-2 bg-slate-600 rounded">
+            <div class="text-xs text-slate-400">mAP@0.5</div>
+            <div class="text-lg font-bold text-blue-400">${(summary.final_metrics.mAP50 * 100).toFixed(1)}%</div>
+          </div>`;
+        }
+        
+        if (summary.final_metrics.mAP50_95 !== undefined) {
+          html += `<div class="text-center p-2 bg-slate-600 rounded">
+            <div class="text-xs text-slate-400">mAP@0.5:0.95</div>
+            <div class="text-lg font-bold text-blue-400">${(summary.final_metrics.mAP50_95 * 100).toFixed(1)}%</div>
+          </div>`;
+        }
+        
+        if (summary.final_metrics.precision !== undefined) {
+          html += `<div class="text-center p-2 bg-slate-600 rounded">
+            <div class="text-xs text-slate-400">Precision</div>
+            <div class="text-lg font-bold text-green-400">${(summary.final_metrics.precision * 100).toFixed(1)}%</div>
+          </div>`;
+        }
+        
+        if (summary.final_metrics.recall !== undefined) {
+          html += `<div class="text-center p-2 bg-slate-600 rounded">
+            <div class="text-xs text-slate-400">Recall</div>
+            <div class="text-lg font-bold text-green-400">${(summary.final_metrics.recall * 100).toFixed(1)}%</div>
+          </div>`;
+        }
+        
+        html += '</div>';
+        
+        // Loss metrics
+        if (summary.final_metrics.total_loss !== undefined) {
+          html += '<div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-slate-400">';
+          html += `<div>Box Loss: <span class="text-white">${summary.final_metrics.box_loss?.toFixed(4) || 'N/A'}</span></div>`;
+          html += `<div>Class Loss: <span class="text-white">${summary.final_metrics.cls_loss?.toFixed(4) || 'N/A'}</span></div>`;
+          html += `<div>DFL Loss: <span class="text-white">${summary.final_metrics.dfl_loss?.toFixed(4) || 'N/A'}</span></div>`;
+          html += `<div>Total Loss: <span class="text-white">${summary.final_metrics.total_loss?.toFixed(4) || 'N/A'}</span></div>`;
+          html += '</div>';
+        }
+        
+        html += '</div>';
+      }
+      
+      // Model Information
+      html += '<div class="mb-4 p-3 bg-slate-700 rounded-lg">';
+      html += '<h5 class="font-medium text-white mb-2">🤖 Model Information</h5>';
+      html += '<div class="text-sm text-slate-300 space-y-1">';
+      
+      if (summary.model_info && summary.model_info.parameters) {
+        html += `<div>Parameters: <span class="text-white font-medium">${summary.model_info.parameters.toLocaleString()}</span></div>`;
+      }
+      
+      if (summary.model_info && summary.model_info.layers) {
+        html += `<div>Layers: <span class="text-white font-medium">${summary.model_info.layers}</span></div>`;
+      }
+      
+      if (summary.published_path) {
+        html += `<div>Published Model: <span class="text-white font-medium">${summary.published_path}</span></div>`;
+        html += '<div class="text-xs text-green-400 mt-1">✅ Model available for inference</div>';
+      } else if (summary.model_path) {
+        html += `<div>Training Output: <span class="text-white font-medium">${summary.model_path}</span></div>`;
+        html += '<div class="text-xs text-yellow-400 mt-1">⚠️ Model not yet published</div>';
+      }
+      
+      html += '</div></div>';
+      
+      html += '</div>';
+      metricsDiv.innerHTML = html;
+    } else if (summary.status === 'error') {
+      metricsDiv.innerHTML = `
+        <div class="training-results">
+          <h4 class="text-lg font-semibold text-red-600 mb-2">❌ Training Failed</h4>
+          <div class="text-sm text-slate-400">Check logs for details.</div>
+        </div>
+      `;
+    } else {
+      metricsDiv.textContent = 'Training job completed but metrics could not be parsed.';
+    }
+  }
+
   // Preprocess button
   document.getElementById('btnPreprocess').addEventListener('click', (e) => {
     e.preventDefault();
@@ -230,7 +355,6 @@
     }
     
     formData.append("dataset", datasetPath);
-    formData.append("img_size", document.getElementById('imgsz').value);
     triggerJob('/trigger-preprocess', 'preprocess', formData);
   });
 
@@ -238,8 +362,6 @@
   document.getElementById('btnTrain').addEventListener('click', (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append("base_weights", document.getElementById('baseWeights').value);
-    formData.append("img_size", document.getElementById('imgsz').value);
     formData.append("epochs", document.getElementById('epochs').value);
     formData.append("batch", document.getElementById('batch').value);
     triggerJob('/trigger-train', 'train', formData);
