@@ -24,7 +24,7 @@ spec:
         envFrom:
         - configMapRef:
             name: app-config
-        # These four will override the values in app-config, if provided in ui
+        # These four override values in app-config when set via UI
         env:
         - name: BASE_WEIGHTS
           valueFrom:
@@ -54,15 +54,14 @@ spec:
             cpu: "4"
             memory: "8Gi"
         volumeMounts:
-        - name: datasets
-          mountPath: /data
-        - name: models
-          mountPath: /models
+        - name: datasets-pvc
+          mountPath: /data     
+        - name: models-pvc
+          mountPath: /models  
       volumes:
-        - name: datasets
-          hostPath:
-            path: /data
-            type: Directory
-        - name: models
-          persistentVolumeClaim:
-            claimName: models-pvc
+      - name: datasets-pvc
+        persistentVolumeClaim:
+          claimName: datasets-pvc
+      - name: models-pvc
+        persistentVolumeClaim:
+          claimName: models-pvc

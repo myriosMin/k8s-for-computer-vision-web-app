@@ -20,13 +20,13 @@ spec:
       - name: preprocess
         image: localhost/worker:dev
         imagePullPolicy: IfNotPresent
-        command: ["python","-m","app.preprocess"]
+        command: ["python", "-m", "app.preprocess"]
         envFrom:
         - configMapRef: 
             name: app-config
         volumeMounts:
-        - name: datasets
-          mountPath: /data
+        - name: datasets-pvc
+          mountPath: /data     
         resources:
           requests: 
             cpu: "250m"
@@ -35,7 +35,6 @@ spec:
             cpu: "1"
             memory: "2Gi"
       volumes:
-      - name: datasets
-        hostPath:
-          path: /data            
-          type: Directory
+      - name: datasets-pvc
+        persistentVolumeClaim:
+          claimName: datasets-pvc

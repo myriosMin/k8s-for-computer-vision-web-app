@@ -13,6 +13,19 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 BUCKET_NAME = "datasets"
 
+# Function to apply a job from a YAML file
+def apply_job_from_yaml(yaml_path: str, job_name: str):
+    # delete old job if present (ignore errors)
+    subprocess.run(
+        ["kubectl", "-n", NAMESPACE, "delete", "job", job_name, "--ignore-not-found"],
+        check=False
+    )
+    # apply the job manifest
+    subprocess.run(
+        ["kubectl", "-n", NAMESPACE, "apply", "-f", yaml_path],
+        check=True
+    )
+
 minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
@@ -79,92 +92,47 @@ def upload_dataset():
 
     return jsonify({"status": "ok", "bucket": BUCKET_NAME, "object": object_name}), 200
 
-# Trigger preprocessing job
-# @app.post("/trigger-preprocess")
-# def trigger_preprocess():
-#     try:
-#         dataset_file = request.form.get("dataset", "aiad_data.zip")
-#         print(f"[DEBUG] Dataset file: {dataset_file}")
-#         img_size      = request.form.get("img_size", "1024")
-#         print(f"[DEBUG] Image size: {img_size}")
-#         patch_configmap({
-#             "RAW_ZIP_PATH": dataset_file,
-#             "IMG_SIZE":      img_size
-#         })
-#         print(f"[DEBUG] Patching ConfigMap with: {patch_configmap}")
-#         # launch job
-
-#         subprocess.run(["make", "job-preprocess"], check=True)
-        
-#         return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
-#         print(f"[DEBUG] Subprocess output: {result.stdout}")
-
-#     except subprocess.CalledProcessError as e:
-#         return jsonify({"status": "error", "message": "Triggering preprocess job failed." + str(e)}), 500
-
+# Update trigger preprocess and train jobs with new kukectl apply
 @app.post("/trigger-preprocess")
 def trigger_preprocess():
     try:
         dataset_file = request.form.get("dataset", "s3://datasets/aiad_data.zip")
-        logging.debug(f"Dataset file: {dataset_file}")
-        
         img_size = request.form.get("img_size", "1024")
-        logging.debug(f"Image size: {img_size}")
 
-        patch_data = {
-            "RAW_ZIP_PATH": dataset_file,
-            "IMG_SIZE": img_size
-        }
-        logging.debug(f"Patching ConfigMap with: {patch_data}")
-        patch_configmap(patch_data)
+        patch_configmap({"RAW_ZIP_PATH": dataset_file, "IMG_SIZE": img_size})
 
-        logging.debug("Launching preprocess job with Makefile...")
-        result = subprocess.run(
-            ["make", "job-preprocess"],
-            check=True,
-            capture_output=True,
-            text=True,
-            # cwd="/project"
-        )
-        logging.debug(f"Subprocess stdout: {result.stdout}")
-        logging.debug(f"Subprocess stderr: {result.stderr}")
-        
+        # create the preprocess job directly
+    # Always use the mount path inside the container
+        apply_job_from_yaml("/app/job-preprocess.yaml", "preprocess")
         return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
 
     except subprocess.CalledProcessError as e:
-        logging.error(f"Subprocess failed: {e.stderr}", exc_info=True)
-        return jsonify({
-            "status": "error",
-            "message": f"Triggering preprocess job failed. stderr={e.stderr}, stdout={e.stdout}"
-        }), 500
-
+        logging.exception("kubectl apply failed")
+        return jsonify({"status": "error", "message": f"kubectl apply failed: {e}"}), 500
     except Exception as e:
         logging.exception("Unexpected error in /trigger-preprocess")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Trigger training job
 
 @app.post("/trigger-train")
 def trigger_train():
     try:
-        base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
-        epochs       = request.form.get("epochs",       "10")
-        img_size     = request.form.get("img_size",     "1024")
-        batch        = request.form.get("batch",        "8")
+        epochs = request.form.get("epochs", "5")
+        img_size = request.form.get("img_size", "1024")
+        batch = request.form.get("batch", "4")
 
-        patch_configmap({
-            "BASE_WEIGHTS": base_weights,
-            "EPOCHS":       epochs,
-            "IMG_SIZE":     img_size,
-            "BATCH":        batch
-        })
+        patch_configmap({"EPOCHS": epochs, "IMG_SIZE": img_size, "BATCH": batch})
 
-        # launch job
-        subprocess.run(["make", "job-train"], check=True)
+        # 👇 create the train job directly
+        apply_job_from_yaml("/app/job-train.yaml", "train")
         return jsonify({"status": "ok", "message": "Train job started"}), 202
 
     except subprocess.CalledProcessError as e:
-        return jsonify({"status": "error", "message": "Triggering train job failed." + str(e)}), 500
+        logging.exception("kubectl apply failed")
+        return jsonify({"status": "error", "message": f"kubectl apply failed: {e}"}), 500
+    except Exception as e:
+        logging.exception("Unexpected error in /trigger-train")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Retrieve job status
 @app.get("/job-status/<jobname>")

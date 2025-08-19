@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: job-train
+  namespace: xview
+data:
+  job-train.yaml: |
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: train
+      namespace: xview
+      labels:
+        app: train
+        part-of: xview
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: train
+            part-of: xview
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: train
+            image: localhost/worker:dev
+            imagePullPolicy: IfNotPresent
+            command: ["python", "-m", "app.train"]
+            envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secret
+            volumeMounts:
+            - name: datasets-pvc
+              mountPath: /data
+            - name: outputs-pvc
+              mountPath: /output
+            resources:
+              requests:
+                cpu: "500m"
+                memory: "1Gi"
+              limits:
+                cpu: "2"
+                memory: "4Gi"
+          volumes:
+          - name: datasets-pvc
+            persistentVolumeClaim:
+              claimName: datasets-pvc
+          - name: outputs-pvc
+            persistentVolumeClaim:
+              claimName: outputs-pvc

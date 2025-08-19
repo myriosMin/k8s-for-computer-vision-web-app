@@ -1,0 +1,13 @@
+# This is for allowing the UI to run jobs in the xview namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ui-job-runner-binding
+  namespace: xview
+subjects:
+  - kind: ServiceAccount
+    name: default    
+roleRef:
+  kind: Role
+  name: ui-job-runner
+  apiGroup: rbac.authorization.k8s.io
