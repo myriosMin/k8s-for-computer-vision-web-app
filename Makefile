@@ -118,8 +118,7 @@ seed-minio: ## Upload data/yolo_xbd/aiad_data.zip into MinIO datasets bucket
 		mc mb -p local/datasets || true; \
 		mc cp "data/yolo_xbd/aiad_data.zip" local/datasets/ || { echo "mc: upload failed"; exit 1; }; \
 	'
-
-
+	
 job-preprocess: seed-minio ## Run preprocess job → pulls dataset from MinIO → expands into datasets-pvc
 	@echo "Running preprocess job (fetching aiad_data.zip from MinIO → datasets-pvc)..."
 	$(K) delete job preprocess --ignore-not-found

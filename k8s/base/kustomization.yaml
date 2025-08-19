@@ -4,6 +4,8 @@ namespace: xview
 resources:
   - namespace.yaml
   - configmap-app.yaml
+  - job-preprocess-cm.yaml
+  - job-train-cm.yaml
   - secret-app.yaml
   - pvc-datasets.yaml
   - pvc-models.yaml
@@ -12,9 +14,6 @@ resources:
   - deploy-ui.yaml
   - deploy-infer.yaml
   - ingress.yaml
-
-  - job-preprocess.yaml
-  - job-train.yaml
 
   - pdb-ui.yaml
   - pdb-infer.yaml
@@ -30,3 +29,5 @@ resources:
   - netpol-allow-egress-web.yaml
   - allow-ui-ingress.yaml
   - allow-preprocess-to-minio.yaml
+  - role-ui-jobs.yaml
+  - rolebinding-ui-job-runner.yaml

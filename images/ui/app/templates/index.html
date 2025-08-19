@@ -135,7 +135,7 @@
   document.getElementById('btnPreprocess').addEventListener('click', (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append("dataset", "aiad_data.zip");  // could make dynamic later
+    formData.append("dataset", "s3://datasets/aiad_data.zip");  // could make dynamic later
     formData.append("img_size", document.getElementById('imgsz').value);
     triggerJob('/trigger-preprocess', 'preprocess', formData);
   });

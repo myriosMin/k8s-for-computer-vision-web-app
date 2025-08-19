@@ -13,6 +13,9 @@ out/
 .LSOverride
 .Trashes
 
+#  Ignore MC file in main dierectory
+*.mc
+
 # Vim
 *~
 .*.swo

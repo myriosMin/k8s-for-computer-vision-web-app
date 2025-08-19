@@ -47,7 +47,7 @@ kubectl apply -f k8s/base/pdb-infer.yaml
 kubectl apply -f k8s/base/pdb-ui.yaml
 
 jobs
-kubectl apply -f k8s/base/job-preprocess.yaml
+kubectl apply -f /app/k8s/base/job-preprocess.yaml
 kubectl apply -f k8s/base/job-train.yaml
 
 hpa

@@ -18,3 +18,24 @@ spec:
             name: ui
             port: 
               number: 80
+      - path: /batch_predict
+        pathType: Prefix
+        backend:
+          service:
+            name: infer
+            port:
+              number: 9000
+      - path: /predict
+        pathType: Prefix
+        backend:
+          service:
+            name: infer
+            port:
+              number: 9000
+      - path: /files
+        pathType: Prefix
+        backend:
+          service:
+            name: infer
+            port:
+              number: 9000

@@ -20,51 +20,14 @@ spec:
   template:
     metadata:
       labels: 
-          app: ui
-          part-of: xview
+        app: ui
+        part-of: xview
     spec:
       terminationGracePeriodSeconds: 30
       initContainers:
       - name: init-dirs
         image: busybox:1.36
         command: ['sh', '-c', 'mkdir -p /data/raw']
-      #   volumeMounts:
-      #       - name: datasets
-      #         mountPath: /data
-      # containers:
-      #   - name: ui
-      #     image: localhost/ui:dev
-      #     imagePullPolicy: IfNotPresent
-      #     ports:
-      #       - containerPort: 8000
-      #         name: http
-      #     envFrom:
-      #       - configMapRef:
-      #           name: app-config
-      #       - secretRef:
-      #           name: app-secret
-      #     volumeMounts:
-      #       - name: datasets
-      #         mountPath: /data
-      #       - name: project-root
-      #         mountPath: /project
-      #     readinessProbe:
-      #       httpGet:
-      #         path: "/"
-      #         port: http
-      #     livenessProbe:
-      #       httpGet:
-      #         path: "/"
-      #         port: http
-      # volumes:
-      #   - name: datasets
-      #     persistentVolumeClaim:
-      #       claimName: datasets-pvc
-      #   - name: project-root
-      #     hostPath:
-      #       path: /run/desktop/mnt/host/c/Users/Admin/Documents/NYPY1S1/AIADJB/k8s-for-computer-vision-web-app
-      #       type: Directory
-        
         volumeMounts:
         - name: datasets
           mountPath: /data
@@ -83,6 +46,12 @@ spec:
         volumeMounts:
         - name: datasets
           mountPath: /data
+        - name: job-preprocess-yaml
+          mountPath: /app/job-preprocess.yaml
+          subPath: job-preprocess.yaml
+        - name: job-train-yaml
+          mountPath: /app/job-train.yaml
+          subPath: job-train.yaml
         readinessProbe:
           httpGet: 
             path: "/" 
@@ -109,6 +78,12 @@ spec:
       - name: datasets
         persistentVolumeClaim:
           claimName: datasets-pvc
+      - name: job-preprocess-yaml
+        configMap:
+          name: job-preprocess
+      - name: job-train-yaml
+        configMap:
+          name: job-train
 ---
 apiVersion: v1
 kind: Service

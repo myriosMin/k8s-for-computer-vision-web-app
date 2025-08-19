@@ -271,16 +271,22 @@ async def batch_predict(
         img.save(out_path)
 
     # Step 6: Zip the results
-    zip_output_path = output_dir.with_suffix(".zip")
-    shutil.make_archive(zip_output_path.with_suffix(""), 'zip', output_dir)
+    base_name = str(output_dir)   # no suffix
+    zip_output_path = shutil.make_archive(base_name, 'zip', output_dir)
+    final_zip_path = Path(PRED_DIR) / Path(zip_output_path).name
+    shutil.move(zip_output_path, final_zip_path)
+    
+    print("PRED_DIR:", PRED_DIR)
+    print("final_zip_path:", final_zip_path)
+    print("Exists?:", final_zip_path.exists())
 
     # Step 7: Return local path as download URL
-    filename = zip_output_path.name
     return {
         "status": "success",
         "num_pairs": len(pairs),
-        "download_url": f"/files/{filename}"
+        "download_url": f"/files/{final_zip_path.name}"
     }
     
+        
 from fastapi.staticfiles import StaticFiles
 app.mount("/files", StaticFiles(directory=PRED_DIR), name="files")
