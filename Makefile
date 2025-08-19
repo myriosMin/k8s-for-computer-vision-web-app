@@ -1,7 +1,25 @@
-SHELL := /bin/bash
+# Cross-platform Makefile for Kubernetes Computer Vision App
+# 
+# Windows users: 
+#   - Use Git Bash, WSL, or PowerShell with make installed
+#   - Ensure kubectl and minikube are in your PATH
+#   - For Git Bash: Use `make cpu-all` normally
+#   - For PowerShell: You may need to escape quotes differently
+#
+# Cross-platform shell detection
+ifeq ($(OS),Windows_NT)
+    SHELL := cmd.exe
+    PATH_SEP := \\
+    FILE_SEP := \\
+else
+    SHELL := /bin/bash
+    PATH_SEP := /
+    FILE_SEP := /
+endif
+
 NS ?= xview
 K  := kubectl -n $(NS)
-KUSTOMIZE_DIR ?= k8s/dev
+KUSTOMIZE_DIR ?= k8s$(FILE_SEP)dev
 
 # ------- Image tags (override after pushing to a registry) -------
 UI_IMG     ?= ui:dev
@@ -17,7 +35,7 @@ INFER_CPU_IMG  ?= infer:cpu
         wait ui infer url serve get desc logs \
         rollout-infer rollout-ui scale-ui scale-infer \
         job-preprocess job-train train-and-reload job-clean \
-        hpa-on hpa-off tunnel nuke image-clean help \
+        hpa-on hpa-off tunnel nuke image-clean help test-paths \
         build-cpu deploy-cpu redeploy-cpu cpu-all
 
 # ======= 0) One-shot happy path =======
@@ -33,15 +51,15 @@ cpu-all: build-cpu deploy-cpu-infrastructure prepare-data-cpu deploy-cpu-service
 
 build:                    ## Build all images inside Minikube's Docker
 	@echo "Using Minikube Docker daemon so images are visible to the cluster"
-	minikube image build -t localhost/$(UI_IMG)     images/ui
-	minikube image build -t localhost/$(WORKER_IMG) images/worker
-	minikube image build -t localhost/$(INFER_IMG)  images/infer
+	minikube image build -t localhost/$(UI_IMG)     images$(FILE_SEP)ui
+	minikube image build -t localhost/$(WORKER_IMG) images$(FILE_SEP)worker
+	minikube image build -t localhost/$(INFER_IMG)  images$(FILE_SEP)infer
 
 build-cpu:                ## Build CPU-only images inside Minikube's Docker (lightweight)
 	@echo "Building CPU-only images for lightweight testing"
-	minikube image build -t localhost/ui:cpu     images/ui-cpu
-	minikube image build -t localhost/worker:cpu images/worker-cpu
-	minikube image build -t localhost/infer:cpu  images/infer-cpu
+	minikube image build -t localhost/ui:cpu     images$(FILE_SEP)ui-cpu
+	minikube image build -t localhost/worker:cpu images$(FILE_SEP)worker-cpu
+	minikube image build -t localhost/infer:cpu  images$(FILE_SEP)infer-cpu
 
 deploy:                   ## Apply all manifests (Kustomize overlay)
 	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
@@ -50,18 +68,18 @@ deploy:                   ## Apply all manifests (Kustomize overlay)
 deploy-cpu:               ## Apply CPU-only manifests (lightweight for testing)
 	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
 	- kubectl delete job preprocess train -n $(NS) --ignore-not-found=true
-	kubectl apply -k k8s/cpu
+	kubectl apply -k k8s$(FILE_SEP)cpu
 
 deploy-cpu-infrastructure: ## Deploy only storage and config first  
 	- kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=180s
 	- kubectl delete job preprocess train -n $(NS) --ignore-not-found=true
 	# Deploy infrastructure components first
-	kubectl apply -f k8s/base/namespace.yaml
-	kubectl apply -f k8s/base/configmap-app.yaml -f k8s/base/secret-app.yaml
-	kubectl apply -f k8s/base/pvc-datasets.yaml -f k8s/base/pvc-models.yaml -f k8s/base/pvc-outputs.yaml
+	kubectl apply -f k8s$(FILE_SEP)base$(FILE_SEP)namespace.yaml
+	kubectl apply -f k8s$(FILE_SEP)base$(FILE_SEP)configmap-app.yaml -f k8s$(FILE_SEP)base$(FILE_SEP)secret-app.yaml
+	kubectl apply -f k8s$(FILE_SEP)base$(FILE_SEP)pvc-datasets.yaml -f k8s$(FILE_SEP)base$(FILE_SEP)pvc-models.yaml -f k8s$(FILE_SEP)base$(FILE_SEP)pvc-outputs.yaml
 
 deploy-cpu-services:      ## Deploy services and deployments after data preparation
-	kubectl apply -k k8s/cpu
+	kubectl apply -k k8s$(FILE_SEP)cpu
 
 redeploy: build deploy wait url  ## Rebuild images, reapply, and wait
 
@@ -131,7 +149,7 @@ prepare-data: ## Copy data/aiad_data.zip into datasets-pvc
 	kubectl run tmp-copy -n $(NS) --restart=Never --image=busybox -- sleep 3600 \
 	  --overrides='{"spec":{"volumes":[{"name":"datasets","persistentVolumeClaim":{"claimName":"datasets-pvc"}}],"containers":[{"name":"copy","image":"busybox","command":["sleep","3600"],"volumeMounts":[{"name":"datasets","mountPath":"/data"}]}]}}'
 	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=30s
-	kubectl cp data/aiad_data.zip $(NS)/tmp-copy:/data/aiad_data.zip
+	kubectl cp data$(FILE_SEP)aiad_data.zip $(NS)/tmp-copy:/data/aiad_data.zip
 	kubectl delete pod tmp-copy -n $(NS)
 	@echo "datasets-pvc is seeded."
 
@@ -143,19 +161,19 @@ prepare-data-cpu: ## Copy initial model for CPU deployment
 	  -- sleep 3600
 	kubectl wait pod/tmp-copy -n $(NS) --for=condition=Ready --timeout=60s
 	# Copy the trained model for inference
-	kubectl cp models/best.pt $(NS)/tmp-copy:/models/best.pt
+	kubectl cp models$(FILE_SEP)best.pt $(NS)/tmp-copy:/models/best.pt
 	kubectl delete pod tmp-copy -n $(NS)
 	@echo "models-pvc is seeded with best.pt for inference."
 
 job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
 	$(K) delete job/preprocess --ignore-not-found
-	$(K) apply -f k8s/base/job-preprocess.yaml
+	$(K) apply -f k8s$(FILE_SEP)base$(FILE_SEP)job-preprocess.yaml
 	$(K) wait --for=condition=complete job/preprocess --timeout=6h
 	@echo "preprocess complete"
 
 job-train:                ## Run train Job and follow until complete (publishes /models/best.pt)
 	$(K) delete job/train --ignore-not-found
-	$(K) create -f k8s/base/job-train.yaml
+	$(K) create -f k8s$(FILE_SEP)base$(FILE_SEP)job-train.yaml
 	$(K) wait --for=condition=complete job/train --timeout=48h
 	@echo "train complete (best.pt published to /models/best.pt)"
 
@@ -166,11 +184,11 @@ job-clean:                ## Remove finished Jobs (TTL also handles this eventua
 
 # ======= 6) HPAs =======
 hpa-on:                   ## Apply autoscalers (UI & Infer)
-	-kubectl apply -f k8s/base/hpa-ui.yaml
-	-kubectl apply -f k8s/base/hpa-infer.yaml
+	-kubectl apply -f k8s$(FILE_SEP)base$(FILE_SEP)hpa-ui.yaml
+	-kubectl apply -f k8s$(FILE_SEP)base$(FILE_SEP)hpa-infer.yaml
 hpa-off:                  ## Remove autoscalers
-	-kubectl delete -f k8s/base/hpa-ui.yaml   --ignore-not-found
-	-kubectl delete -f k8s/base/hpa-infer.yaml --ignore-not-found
+	-kubectl delete -f k8s$(FILE_SEP)base$(FILE_SEP)hpa-ui.yaml   --ignore-not-found
+	-kubectl delete -f k8s$(FILE_SEP)base$(FILE_SEP)hpa-infer.yaml --ignore-not-found
 
 # ======= 7) Ingress tunneling (rarely needed with localtest.me) =======
 tunnel:                   ## Run minikube tunnel (foreground)
@@ -197,3 +215,10 @@ image-clean: ## Delete built images from Minikube
 # HELP
 help:                     ## Show help
 	@grep -E '^[a-zA-Z0-9_.-]+:.*?## ' $(MAKEFILE_LIST) | sed -e 's/:.*##/: /' -e 's/\\$$//' | awk 'BEGIN {FS = ": "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
+
+test-paths:               ## Test cross-platform path variables (debug utility)
+	@echo "OS detected: $(OS)"
+	@echo "SHELL: $(SHELL)"
+	@echo "FILE_SEP: $(FILE_SEP)"
+	@echo "Sample path: k8s$(FILE_SEP)base$(FILE_SEP)namespace.yaml"
+	@echo "KUSTOMIZE_DIR: $(KUSTOMIZE_DIR)"

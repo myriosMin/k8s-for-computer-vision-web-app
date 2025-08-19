@@ -65,6 +65,43 @@
 
 # Quickstart (Essentials)
 
+## Cross-Platform Compatibility
+
+### Windows Users
+
+This project is now fully compatible with Windows. You have several options:
+
+**Option 1: Git Bash (Recommended)**
+- Install [Git for Windows](https://git-scm.com/download/win) which includes Git Bash
+- Use Git Bash terminal for all commands
+- Run commands normally: `make cpu-all`
+
+**Option 2: WSL (Windows Subsystem for Linux)**
+- Install WSL2 with Ubuntu
+- Install make: `sudo apt install make`
+- Use WSL terminal for all commands
+
+**Option 3: PowerShell with make**
+- Install make for Windows (via Chocolatey: `choco install make`)
+- Use PowerShell terminal
+- May need to escape quotes differently in some commands
+
+**Option 4: Docker Desktop with WSL2 Backend**
+- Install Docker Desktop for Windows
+- Enable WSL2 integration
+- Use WSL2 terminal
+
+### Cross-Platform Path Handling
+
+The Makefile automatically detects your operating system and uses the correct path separators:
+- Windows: Uses `\` for file paths
+- Linux/macOS: Uses `/` for file paths
+
+Test your platform setup:
+```bash
+make test-paths
+```
+
 ### What You Need to Fill In
 
 * Put `aiad_data.zip` under `/data` which includes raw xBD data, partially or full.

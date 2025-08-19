@@ -7,35 +7,35 @@ echo "🚀 Starting CPU-only lightweight deployment..."
 
 # Check if minikube is running
 if ! minikube status > /dev/null 2>&1; then
-    echo "❌ Minikube is not running. Please start minikube first:"
+    echo "Minikube is not running. Please start minikube first:"
     echo "   minikube start"
     exit 1
 fi
 
-echo "✅ Minikube is running"
+echo "Minikube is running"
 
 # Build CPU images
-echo "🔨 Building CPU-only images..."
+echo "Building CPU-only images..."
 make build-cpu
 
 # Deploy CPU configuration
-echo "📦 Deploying CPU-only configuration..."
+echo "Deploying CPU-only configuration..."
 make deploy-cpu
 
 # Wait for deployments
-echo "⏳ Waiting for deployments to be ready..."
+echo "Waiting for deployments to be ready..."
 make wait
 
 # Show status
-echo "📊 Deployment status:"
+echo "Deployment status:"
 make get
 
 # Show URL
-echo "🌐 Access URL:"
+echo "Access URL:"
 make url
 
 echo ""
-echo "✅ CPU-only deployment complete!"
+echo "CPU-only deployment complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Access the app: make serve"
