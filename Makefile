@@ -22,7 +22,7 @@ INFER_CPU_IMG  ?= infer:cpu
         build-cpu deploy-cpu redeploy-cpu cpu-all
 
 # ======= 0) One-shot happy path =======
-all: build deploy wait url serve  ## Start minikube, build, deploy, wait, print URL
+all: minio build deploy clear-pv-claim wait seed-minio url serve ## Start minikube, build, deploy, wait, print URL
 
 # CPU-only lightweight deployment for testing
 cpu-all: build-cpu deploy-cpu-infrastructure prepare-data-cpu deploy-cpu-services wait url serve  ## Start minikube, build CPU images, deploy infrastructure, prepare data, deploy services, wait, print URL
@@ -31,6 +31,16 @@ cpu-all: build-cpu deploy-cpu-infrastructure prepare-data-cpu deploy-cpu-service
 # skipped; done separately
 
 # ======= 2) Build & Deploy =======
+
+clear-pv-claim:
+	kubectl patch pv minio-pv -p '{"spec":{"claimRef": null}}'
+
+minio: ## Deploy MinIO
+	kubectl apply -f k8s/base/minio-namespace.yaml
+	kubectl apply -f k8s/base/minio-secret.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-pvc.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-deployment.yaml -n $(NS)
+	kubectl apply -f k8s/base/minio-service.yaml -n $(NS)
 
 build:                    ## Build all images inside Minikube's Docker
 	@echo "Using Minikube Docker daemon so images are visible to the cluster"
@@ -149,19 +159,20 @@ prepare-data-cpu: ## Copy initial model for CPU deployment
 job-preprocess: prepare-data           ## Run preprocess Job and follow until complete
 	$(K) delete job/preprocess --ignore-not-found
 	$(K) apply -f k8s/base/job-preprocess.yaml
-	$(K) wait --for=condition=complete job/preprocess --timeout=6h
-	@echo "preprocess complete"
+	$(K) wait --for=condition=complete job/preprocess --timeout=600s
+	@echo "Preprocess complete. datasets-pvc is populated."
 
-job-train:                ## Run train Job and follow until complete (publishes /models/best.pt)
-	$(K) delete job/train --ignore-not-found
-	$(K) create -f k8s/base/job-train.yaml
+job-train: job-preprocess ## Run training job → consumes datasets-pvc → writes best.pt to models-pvc
+	@echo "Running training job..."
+	$(K) delete job train --ignore-not-found
+	$(K) apply -f k8s/base/job-train.yaml
 	$(K) wait --for=condition=complete job/train --timeout=48h
-	@echo "train complete (best.pt published to /models/best.pt)"
+	@echo "Training complete. best.pt published into models-pvc."
 
-train-and-reload: job-train rollout-infer ui  ## Train → publish best.pt → restart infer → check UI
+train-and-reload: job-train rollout-infer ui ## Train → publish best.pt → restart infer → check UI
 
-job-clean:                ## Remove finished Jobs (TTL also handles this eventually)
-	$(K) delete job/preprocess job/train --ignore-not-found || true
+job-clean: ## Remove finished Jobs (PVCs remain)
+	$(K) delete job preprocess job train --ignore-not-found || true
 
 # ======= 6) HPAs =======
 hpa-on:                   ## Apply autoscalers (UI & Infer)

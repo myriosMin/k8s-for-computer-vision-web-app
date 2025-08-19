@@ -3,6 +3,25 @@ import os, requests
 import tempfile
 import zipfile
 import subprocess, json
+import logging
+from minio import Minio
+
+logging.basicConfig(level=logging.DEBUG)
+
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio-service:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+BUCKET_NAME = "datasets"
+
+minio_client = Minio(
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=False
+)
+
+if not minio_client.bucket_exists(BUCKET_NAME):
+    minio_client.make_bucket(BUCKET_NAME)
 
 INFER_URL = os.getenv("INFER_URL", "http://infer:9000")
 NAMESPACE = os.getenv("NAMESPACE", "xview")
@@ -42,36 +61,86 @@ def inference_page():
     # Page 2: inference
     return render_template("inference.html")
 
-# Mount uploaded dataset
+# upload file to Minio database
 @app.post("/upload-dataset")
 def upload_dataset():
     file = request.files.get("file")
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    save_path = os.path.join("/data/raw", file.filename)  # volume mount
-    file.save(save_path)
+    object_name = file.filename
+    minio_client.put_object(
+        BUCKET_NAME,
+        object_name,
+        file.stream,
+        length=-1,
+        part_size=10*1024*1024,
+    )
 
-    return jsonify({"status": "ok", "path": save_path}), 200
+    return jsonify({"status": "ok", "bucket": BUCKET_NAME, "object": object_name}), 200
 
 # Trigger preprocessing job
+# @app.post("/trigger-preprocess")
+# def trigger_preprocess():
+#     try:
+#         dataset_file = request.form.get("dataset", "aiad_data.zip")
+#         print(f"[DEBUG] Dataset file: {dataset_file}")
+#         img_size      = request.form.get("img_size", "1024")
+#         print(f"[DEBUG] Image size: {img_size}")
+#         patch_configmap({
+#             "RAW_ZIP_PATH": dataset_file,
+#             "IMG_SIZE":      img_size
+#         })
+#         print(f"[DEBUG] Patching ConfigMap with: {patch_configmap}")
+#         # launch job
+
+#         subprocess.run(["make", "job-preprocess"], check=True)
+        
+#         return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
+#         print(f"[DEBUG] Subprocess output: {result.stdout}")
+
+#     except subprocess.CalledProcessError as e:
+#         return jsonify({"status": "error", "message": "Triggering preprocess job failed." + str(e)}), 500
+
 @app.post("/trigger-preprocess")
 def trigger_preprocess():
     try:
-        dataset_file = request.form.get("dataset", "aiad_data.zip")
-        img_size      = request.form.get("img_size", "1024")
+        dataset_file = request.form.get("dataset", "s3://datasets/aiad_data.zip")
+        logging.debug(f"Dataset file: {dataset_file}")
+        
+        img_size = request.form.get("img_size", "1024")
+        logging.debug(f"Image size: {img_size}")
 
-        patch_configmap({
+        patch_data = {
             "RAW_ZIP_PATH": dataset_file,
-            "IMG_SIZE":      img_size
-        })
+            "IMG_SIZE": img_size
+        }
+        logging.debug(f"Patching ConfigMap with: {patch_data}")
+        patch_configmap(patch_data)
 
-        # launch job
-        subprocess.run(["make", "job-preprocess"], check=True)
+        logging.debug("Launching preprocess job with Makefile...")
+        result = subprocess.run(
+            ["make", "job-preprocess"],
+            check=True,
+            capture_output=True,
+            text=True,
+            # cwd="/project"
+        )
+        logging.debug(f"Subprocess stdout: {result.stdout}")
+        logging.debug(f"Subprocess stderr: {result.stderr}")
+        
         return jsonify({"status": "ok", "message": "Preprocess job started"}), 202
 
     except subprocess.CalledProcessError as e:
-        return jsonify({"status": "error", "message": "Triggering preprocess job failed." + str(e)}), 500
+        logging.error(f"Subprocess failed: {e.stderr}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "message": f"Triggering preprocess job failed. stderr={e.stderr}, stdout={e.stdout}"
+        }), 500
+
+    except Exception as e:
+        logging.exception("Unexpected error in /trigger-preprocess")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # Trigger training job
 

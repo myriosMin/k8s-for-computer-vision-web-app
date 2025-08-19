@@ -1,0 +1,19 @@
+# minio-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+  namespace: xview
+spec:
+  type: NodePort   # or LoadBalancer if on cloud
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+      nodePort: 30000
+    - name: console
+      port: 9001
+      targetPort: 9001
+      nodePort: 30001
+  selector:
+    app: minio
