@@ -320,7 +320,7 @@ def upload_dataset():
 def trigger_preprocess():
     try:
         dataset_file = request.form.get("dataset", "aiad_data.zip")
-        img_size = "1024"  # Fixed image size for consistency
+        img_size = "640"  # Fixed image size for consistency
 
         # Build the full path for the uploaded dataset
         if not dataset_file.startswith("/data/"):
@@ -355,7 +355,7 @@ def trigger_train():
     try:
         # For fine-tuning, use fixed values for model and image size
         base_weights = "/models/best.pt"  # Use existing fine-tuned model
-        img_size = "1024"  # Fixed to match training data
+        img_size = "640"  # Fixed to match training data
         
         # Get user-configurable parameters
         epochs = request.form.get("epochs", "10")
@@ -640,6 +640,18 @@ def infer_file():
         return jsonify({"error": r.text}), 500
 
     return r.json(), 200
+
+# Model status endpoint
+@app.get("/infer-status")
+def infer_status():
+    """Get model deployment status from inference service"""
+    try:
+        r = requests.get(f"{INFER_URL}/model-status")
+        if r.status_code != 200:
+            return jsonify({"error": "Failed to get model status"}), 500
+        return r.json(), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # Batch inference
 @app.post("/upload-batch")

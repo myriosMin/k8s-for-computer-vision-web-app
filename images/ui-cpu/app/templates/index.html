@@ -3,6 +3,14 @@
 <div class="max-w-5xl mx-auto">
   <h1 class="text-3xl font-semibold text-white mb-6">Data Loading & Training</h1>
 
+  <!-- Model Status -->
+  <div id="modelStatus" class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm mb-6">
+    <h2 class="text-lg font-semibold text-white mb-3">📊 Model Deployment Status</h2>
+    <div id="statusContent" class="text-sm text-slate-300">
+      Loading model status...
+    </div>
+  </div>
+
   <!-- Batch Upload -->
   <form id="uploadForm"
         class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
@@ -366,5 +374,53 @@
     formData.append("batch", document.getElementById('batch').value);
     triggerJob('/trigger-train', 'train', formData);
   });
+
+  // Model status functionality
+  async function updateModelStatus() {
+    try {
+      const response = await fetch('/infer-status');
+      const status = await response.json();
+      
+      const statusContent = document.getElementById('statusContent');
+      let html = '';
+      
+      if (status.deployment_mode === 'canary') {
+        html = `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-3 bg-blue-900 rounded">
+              <div class="text-blue-300 font-medium mb-1">📦 Current Model</div>
+              <div class="text-slate-300 text-xs">Production traffic: ~50%</div>
+            </div>
+            <div class="p-3 bg-yellow-900 rounded">
+              <div class="text-yellow-300 font-medium mb-1">🚀 Canary Model (v${status.canary_version?.version || 'Unknown'})</div>
+              <div class="text-slate-300 text-xs">Testing traffic: ~50%</div>
+              <div class="text-slate-300 text-xs mt-1">
+                Runtime: ${status.canary_elapsed_minutes || 0} min 
+                ${status.ready_for_promotion ? '✅ Ready for promotion' : '⏳ Evaluating...'}
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        html = `
+          <div class="p-3 bg-green-900 rounded">
+            <div class="text-green-300 font-medium mb-1">✅ Production Model</div>
+            <div class="text-slate-300 text-xs">
+              ${status.current_model ? 'Model loaded and serving 100% traffic' : 'No model loaded'}
+            </div>
+          </div>
+        `;
+      }
+      
+      statusContent.innerHTML = html;
+    } catch (error) {
+      document.getElementById('statusContent').innerHTML = 
+        '<div class="text-red-400 text-sm">Failed to load model status</div>';
+    }
+  }
+
+  // Update status on page load and every 30 seconds
+  updateModelStatus();
+  setInterval(updateModelStatus, 30000);
 </script>
 {% endblock %}

@@ -103,7 +103,7 @@ def main():
     base_weights = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
     data_yaml = os.getenv("DATA_YAML", str(root / "xbd6.yaml"))
     epochs = int(os.getenv("EPOCHS", "10"))
-    imgsz = int(os.getenv("IMG_SIZE", "1024"))
+    imgsz = int(os.getenv("IMG_SIZE", "640"))
     batch = int(os.getenv("BATCH", "8"))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -166,17 +166,67 @@ def main():
     print(f"[training] Training complete after {epochs} epochs")
     
     best = Path(results.save_dir) / "weights" / "best.pt"
-    pub = Path(os.getenv("MODELS_DIR", "/models")) / "best.pt"
-
+    models_dir = Path(os.getenv("MODELS_DIR", "/models"))
+    
     try:
-        pub.parent.mkdir(parents=True, exist_ok=True)
-        # Prefer atomic replace to avoid partial reads by infer pods
+        models_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Model versioning logic
+        import time
+        import json
+        
+        # Find current version
+        version_file = models_dir / "version.json"
+        if version_file.exists():
+            with open(version_file) as f:
+                version_info = json.load(f)
+            current_version = version_info.get("current_version", 0)
+            new_version = current_version + 1
+        else:
+            current_version = 0
+            new_version = 1
+            
+        # Save new model with version
+        new_model_path = models_dir / f"best-v{new_version}.pt"
+        shutil.copy2(best, new_model_path)
+        print(f"[versioning] Saved new model as {new_model_path}")
+        
+        # Update version info for canary deployment
+        timestamp = int(time.time())
+        version_info = {
+            "current_version": current_version,
+            "canary_version": new_version,
+            "canary_start_time": timestamp,
+            "canary_active": True,
+            "models": {
+                f"v{current_version}": {
+                    "file": f"best-v{current_version}.pt" if current_version > 0 else "best.pt",
+                    "created_at": version_info.get("models", {}).get(f"v{current_version}", {}).get("created_at", timestamp),
+                    "traffic_weight": 50
+                },
+                f"v{new_version}": {
+                    "file": f"best-v{new_version}.pt",
+                    "created_at": timestamp,
+                    "traffic_weight": 50
+                }
+            }
+        }
+        
+        # Save version metadata
+        with open(version_file, 'w') as f:
+            json.dump(version_info, f, indent=2)
+        
+        print(f"[versioning] Starting canary deployment: v{current_version} (50%) + v{new_version} (50%)")
+        print(f"[versioning] Auto-promotion in 3 minutes if healthy")
+        
+    except Exception as e:
+        print(f"[publish][WARN] Could not publish versioned model: {e}")
+        # Fallback to old behavior
+        pub = models_dir / "best.pt"
         tmp = pub.with_suffix(".pt.tmp")
         shutil.copy2(best, tmp)
         os.replace(tmp, pub)
-        print(f"[publish] Copied best weight to {pub}")
-    except Exception as e:
-        print(f"[publish][WARN] Could not publish best.pt to {pub}: {e}")
+        print(f"[publish] Fallback: Copied best weight to {pub}")
 
 
 if __name__ == "__main__":

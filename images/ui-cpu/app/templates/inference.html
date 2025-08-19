@@ -39,6 +39,7 @@
     </div>
     <div class="bg-slate-900 p-2 rounded text-center">
       <p class="text-slate-300 mb-2">Predicted Overlay</p>
+      <div id="modelInfo" class="text-xs text-slate-400 mb-2 hidden"></div>
       <img id="overlayImg"
            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjUwJSIgeT0iNTAiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIHRleHQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjQ4IiBmaWxsPSIjN2M4Y2FkIj8/PjwvdGV4dD48L3N2Zz4="
            alt="Overlay" class="w-full object-contain">
@@ -109,6 +110,28 @@
 
     if (json.overlay_png_base64) {
       document.getElementById('overlayImg').src = 'data:image/png;base64,' + json.overlay_png_base64;
+      
+      // Show which model was used
+      const modelInfo = document.getElementById('modelInfo');
+      if (json.model_used) {
+        let modelLabel = json.model_used;
+        let modelColor = 'text-slate-400';
+        
+        if (json.model_used === 'canary') {
+          modelLabel = '🚀 Canary Model';
+          modelColor = 'text-yellow-400';
+        } else if (json.model_used === 'canary_promoted') {
+          modelLabel = '✅ Promoted Model';
+          modelColor = 'text-green-400';
+        } else if (json.model_used === 'current') {
+          modelLabel = '📦 Current Model';
+          modelColor = 'text-blue-400';
+        }
+        
+        modelInfo.textContent = modelLabel;
+        modelInfo.className = `text-xs mb-2 ${modelColor}`;
+        modelInfo.classList.remove('hidden');
+      }
     }
   });
 

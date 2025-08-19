@@ -8,6 +8,8 @@ from ultralytics.utils.plotting import Colors
 import os
 import io
 import base64
+import json
+import random
 import torch
 import torch.nn as nn
 import numpy as np
@@ -24,7 +26,8 @@ from datetime import datetime
 
 # ========== Configuration ==========
 MODEL_PATH = os.getenv("MODEL_PATH", "/models/best.pt")
-IMG_SIZE = int(os.getenv("IMG_SIZE", 1024))
+MODEL_DIR = os.getenv("MODEL_DIR", "/models")
+IMG_SIZE = int(os.getenv("IMG_SIZE", 640))
 PRED_DIR = os.getenv("PRED_DIR", "/output/predictions")
 BASE_WEIGHTS = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
 
@@ -49,8 +52,68 @@ def patch_first_conv_to_6ch(model_nn: nn.Module):
     raise RuntimeError("No 3-channel Conv2d found to patch.")
 
 
+# ========== Model Loading Helpers ==========
+def load_models():
+    """Load both current and canary models if available"""
+    models = {"current": None, "canary": None}
+    
+    # Load current model
+    current_path = Path(MODEL_DIR) / "current" / "best.pt"
+    if current_path.exists():
+        print(f"[INFO] Loading current model from {current_path}")
+        models["current"] = YOLO(str(current_path))
+    else:
+        # Fallback to old model structure
+        best_path = Path(MODEL_PATH)
+        if best_path.exists():
+            print(f"[INFO] Loading model from {best_path}")
+            models["current"] = YOLO(str(best_path))
+    
+    # Load canary model if available
+    canary_path = Path(MODEL_DIR) / "canary" / "best.pt"
+    if canary_path.exists():
+        print(f"[INFO] Loading canary model from {canary_path}")
+        models["canary"] = YOLO(str(canary_path))
+        
+        # Load canary version metadata
+        version_path = Path(MODEL_DIR) / "canary" / "version.json"
+        if version_path.exists():
+            with open(version_path, 'r') as f:
+                version_data = json.load(f)
+                models["canary_version"] = version_data
+                print(f"[INFO] Canary version: {version_data.get('version')}")
+    
+    return models
+
+def select_model_for_prediction(models):
+    """Select which model to use based on canary deployment logic"""
+    # If no canary model, use current
+    if not models.get("canary"):
+        return models["current"], "current"
+    
+    # Check if canary should be auto-promoted
+    canary_version = models.get("canary_version", {})
+    start_time_str = canary_version.get("canary_start_time")
+    if start_time_str:
+        start_time = datetime.fromisoformat(start_time_str)
+        current_time = datetime.now()
+        minutes_elapsed = (current_time - start_time).total_seconds() / 60
+        
+        # Auto-promote after 3 minutes
+        if minutes_elapsed >= 3:
+            print(f"[INFO] Canary deployment promotion time reached ({minutes_elapsed:.1f} min)")
+            return models["canary"], "canary_promoted"
+    
+    # 50/50 traffic split
+    use_canary = random.random() < 0.5
+    if use_canary:
+        return models["canary"], "canary"
+    else:
+        return models["current"], "current"
+
+
 # ========== Image Handling ==========
-def stack_pre_post(pre_bytes, post_bytes, size=1024):
+def stack_pre_post(pre_bytes, post_bytes, size=640):
     pre_arr = np.asarray(Image.open(io.BytesIO(pre_bytes)).convert("RGB"))
     post_arr = np.asarray(Image.open(io.BytesIO(post_bytes)).convert("RGB"))
 
@@ -116,18 +179,28 @@ def get_overlay_plot(res, class_names, img_size, post_bytes):
 # ========== FastAPI with Lifespan ==========
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_file = Path(MODEL_PATH)
-    if model_file.exists():
-        print(f"[INFO] Loading model from {model_file}")
-        model = YOLO(str(model_file))
-    else:
-        print(f"[WARN] {model_file} not found. Falling back to base weights: {BASE_WEIGHTS}")
-        print("[WARN] This is totally not recommended. Please train the model first, or put best.pt under /models/")
+    # Load models (current and canary if available)
+    models = load_models()
+    
+    # If no models found, fallback to base weights
+    if not models["current"] and not models["canary"]:
+        print(f"[WARN] No models found. Falling back to base weights: {BASE_WEIGHTS}")
+        print("[WARN] This is not recommended. Please train the model first.")
         model = YOLO(BASE_WEIGHTS)
-    patch_first_conv_to_6ch(model.model)
-    model.model.eval()
-    app.state.model = model
-    print("[INFO] YOLO model loaded and patched.")
+        patch_first_conv_to_6ch(model.model)
+        model.model.eval()
+        models["current"] = model
+    else:
+        # Patch all loaded models
+        if models["current"]:
+            patch_first_conv_to_6ch(models["current"].model)
+            models["current"].model.eval()
+        if models["canary"]:
+            patch_first_conv_to_6ch(models["canary"].model)
+            models["canary"].model.eval()
+    
+    app.state.models = models
+    print("[INFO] YOLO models loaded and patched.")
     yield
     print("[INFO] App shutdown.")
 
@@ -139,6 +212,33 @@ app = FastAPI(lifespan=lifespan)
 def healthz():
     return {"ok": True}
 
+# ========== Model Status Endpoint ==========
+@app.get("/model-status")
+def model_status(request: Request):
+    """Get current model deployment status"""
+    models = request.app.state.models
+    
+    status = {
+        "current_model": models.get("current") is not None,
+        "canary_model": models.get("canary") is not None,
+        "canary_version": models.get("canary_version"),
+        "deployment_mode": "production"
+    }
+    
+    # Check if canary is ready for promotion
+    canary_version = models.get("canary_version", {})
+    start_time_str = canary_version.get("canary_start_time")
+    if start_time_str:
+        start_time = datetime.fromisoformat(start_time_str)
+        current_time = datetime.now()
+        minutes_elapsed = (current_time - start_time).total_seconds() / 60
+        
+        status["deployment_mode"] = "canary"
+        status["canary_elapsed_minutes"] = round(minutes_elapsed, 1)
+        status["ready_for_promotion"] = minutes_elapsed >= 3
+    
+    return status
+
 # ========== Inference Endpoint ==========
 @app.post("/predict")
 async def predict(
@@ -146,7 +246,11 @@ async def predict(
     pre_disaster: UploadFile = File(...),
     post_disaster: UploadFile = File(...)
 ):
-    model = request.app.state.model
+    models = request.app.state.models
+    
+    # Select model based on canary deployment logic
+    model, model_type = select_model_for_prediction(models)
+    print(f"[INFO] Using model: {model_type}")
 
     # Read uploaded images
     pre_bytes = await pre_disaster.read()
@@ -179,7 +283,8 @@ async def predict(
 
     return JSONResponse({
         "detections": dets,
-        "overlay_png_base64": encoded
+        "overlay_png_base64": encoded,
+        "model_used": model_type  # Include which model was used
     })
     
     
@@ -212,7 +317,11 @@ async def batch_predict(
     request: Request,
     zipfile: UploadFile = File(...)
 ):
-    model = request.app.state.model
+    models = request.app.state.models
+    
+    # Select model based on canary deployment logic
+    model, model_type = select_model_for_prediction(models)
+    print(f"[INFO] Batch prediction using model: {model_type}")
 
     # Step 1: Save uploaded zip
     tmp_dir = Path(tempfile.mkdtemp())
