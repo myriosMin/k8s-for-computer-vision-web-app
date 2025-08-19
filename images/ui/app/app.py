@@ -74,7 +74,7 @@ def upload_dataset():
         object_name,
         file.stream,
         length=-1,
-        part_size=10*1024*1024,
+        part_size=10*640*640,
     )
 
     return jsonify({"status": "ok", "bucket": BUCKET_NAME, "object": object_name}), 200
@@ -85,7 +85,7 @@ def upload_dataset():
 #     try:
 #         dataset_file = request.form.get("dataset", "aiad_data.zip")
 #         print(f"[DEBUG] Dataset file: {dataset_file}")
-#         img_size      = request.form.get("img_size", "1024")
+#         img_size      = request.form.get("img_size", "640")
 #         print(f"[DEBUG] Image size: {img_size}")
 #         patch_configmap({
 #             "RAW_ZIP_PATH": dataset_file,
@@ -108,7 +108,7 @@ def trigger_preprocess():
         dataset_file = request.form.get("dataset", "s3://datasets/aiad_data.zip")
         logging.debug(f"Dataset file: {dataset_file}")
         
-        img_size = request.form.get("img_size", "1024")
+        img_size = request.form.get("img_size", "640")
         logging.debug(f"Image size: {img_size}")
 
         patch_data = {
@@ -149,7 +149,7 @@ def trigger_train():
     try:
         base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
         epochs       = request.form.get("epochs",       "10")
-        img_size     = request.form.get("img_size",     "1024")
+        img_size     = request.form.get("img_size",     "640")
         batch        = request.form.get("batch",        "8")
 
         patch_configmap({

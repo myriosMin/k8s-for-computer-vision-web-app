@@ -24,7 +24,7 @@ from datetime import datetime
 
 # ========== Configuration ==========
 MODEL_PATH = os.getenv("MODEL_PATH", "/models/best.pt")
-IMG_SIZE = int(os.getenv("IMG_SIZE", 1024))
+IMG_SIZE = int(os.getenv("IMG_SIZE", 640))
 PRED_DIR = os.getenv("PRED_DIR", "/output/predictions")
 BASE_WEIGHTS = os.getenv("BASE_WEIGHTS", "yolo11n-seg.pt")
 
@@ -50,7 +50,7 @@ def patch_first_conv_to_6ch(model_nn: nn.Module):
 
 
 # ========== Image Handling ==========
-def stack_pre_post(pre_bytes, post_bytes, size=1024):
+def stack_pre_post(pre_bytes, post_bytes, size=640):
     pre_arr = np.asarray(Image.open(io.BytesIO(pre_bytes)).convert("RGB"))
     post_arr = np.asarray(Image.open(io.BytesIO(post_bytes)).convert("RGB"))
 
