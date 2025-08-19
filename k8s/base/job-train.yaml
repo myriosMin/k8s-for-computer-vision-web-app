@@ -48,11 +48,11 @@ spec:
               key: BATCH
         resources:
           requests: 
-            cpu: "1"
-            memory: "4Gi"
+            cpu: "500m"
+            memory: "1Gi"
           limits:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "2"
+            memory: "3Gi"
         volumeMounts:
         - name: datasets
           mountPath: /data
@@ -60,9 +60,8 @@ spec:
           mountPath: /models
       volumes:
         - name: datasets
-          hostPath:
-            path: /data
-            type: Directory
+          persistentVolumeClaim:
+            claimName: datasets-pvc
         - name: models
           persistentVolumeClaim:
             claimName: models-pvc

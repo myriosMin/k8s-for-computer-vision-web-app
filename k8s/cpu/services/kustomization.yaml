@@ -1,0 +1,110 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: xview
+
+resources:
+  - ../../base/deploy-ui.yaml
+  - ../../base/deploy-infer.yaml
+  - ../../base/deploy-minio.yaml
+  - ../../base/deploy-redis.yaml
+  - ../../base/ingress.yaml
+
+  # High Availability
+  - ../../base/pdb-ui.yaml
+  - ../../base/pdb-infer.yaml
+  - ../../base/hpa-ui.yaml
+  - ../../base/hpa-infer.yaml
+
+  # Network Security
+  - ../../base/netpol-enhanced.yaml
+
+patches:
+# Reduce resource requests and limits for CPU-only deployment
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "50m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "128Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "200m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "512Mi"
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ui
+
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "100m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "256Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "500m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "1Gi"
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: infer
+
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "50m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "128Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "200m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "512Mi"
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: minio
+
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "25m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "64Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "100m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "256Mi"
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: redis
+
+images:
+# Use standard CPU images instead of enhanced for stability
+- name: localhost/ui:enhanced
+  newName: localhost/ui
+  newTag: cpu
+- name: localhost/infer:enhanced
+  newName: localhost/infer
+  newTag: cpu
+- name: localhost/worker:dev
+  newName: localhost/worker
+  newTag: cpu

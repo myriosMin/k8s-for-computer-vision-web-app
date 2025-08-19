@@ -5,24 +5,30 @@ resources:
   - namespace.yaml
   - configmap-app.yaml
   - secret-app.yaml
+  - secret-minio.yaml
+  - rbac-ui.yaml
+  
+  # Storage
   - pvc-datasets.yaml
   - pvc-models.yaml
   - pvc-outputs.yaml
 
+  # Core Services
   - deploy-ui.yaml
   - deploy-infer.yaml
+  - deploy-minio.yaml
+  - deploy-redis.yaml
   - ingress.yaml
 
-  - job-preprocess.yaml
-  - job-train.yaml
+  # Jobs (removed from auto-deployment - triggered via UI)
+  # - job-preprocess.yaml
+  # - job-train.yaml
 
+  # High Availability
   - pdb-ui.yaml
   - pdb-infer.yaml
-
   - hpa-ui.yaml
   - hpa-infer.yaml
 
-  - netpol-default-deny.yaml
-  - netpol-allow-ui-infer.yaml
-  - netpol-egress-dns.yaml
-  - netpol-allow-egress-web.yaml
+  # Network Security
+  - netpol-enhanced.yaml

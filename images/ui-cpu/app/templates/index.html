@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-3xl font-semibold text-white mb-6">Data Loading & Training</h1>
+
+  <!-- Batch Upload -->
+  <form id="uploadForm"
+        class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
+    <label class="block mb-3 text-sm font-medium text-slate-300">Batch upload (drag & drop or select a zipped file)</label>
+    <div id="uploadStatus" class="hidden mb-3 p-2 rounded text-sm"></div>
+    <input id="fileInput" class="w-full border border-slate-600 p-2 bg-slate-900 text-slate-100 rounded"
+           type="file" name="file" accept=".zip" />
+    <button id="uploadBtn" class="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded" type="button">
+      Upload
+    </button>
+  </form>
+
+  <!-- Configuration + Results -->
+  <div class="grid md:grid-cols-2 gap-6 mt-8">
+    <!-- Model Config -->
+    <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm hover:shadow-md transition">
+      <h2 class="text-xl font-semibold text-white mb-4">Model Configuration</h2>
+
+      <label class="block text-sm text-slate-400 mb-1">Base Weights (first training only)</label>
+      <select id="baseWeights"
+              class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-2">
+        <option>yolo11n-seg.pt</option>
+        <option>yolo11m-seg.pt</option>
+        <option>yolo11l-seg.pt</option>
+      </select>
+      <p class="text-xs text-slate-500 mb-4">
+        Only used for the first training run. Subsequent training uses <code>best.pt</code> from the last run.
+      </p>
+
+      <label class="block text-sm text-slate-400 mb-1">Image Size (imgsz)</label>
+      <input id="imgsz" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
+             type="number" value="1024" />
+
+      <label class="block text-sm text-slate-400 mb-1">Epochs</label>
+      <input id="epochs" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-4"
+             type="number" value="10" />
+
+      <label class="block text-sm text-slate-400 mb-1">Batch Size</label>
+      <input id="batch" class="border border-slate-600 p-2 w-full bg-slate-900 text-white rounded mb-6"
+             type="number" value="8" />
+
+      <div class="flex flex-wrap gap-3">
+        <button id="btnPreprocess" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded">
+          Run Preprocess
+        </button>
+        <button id="btnTrain" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded">
+          Start Training
+        </button>
+      </div>
+
+      <!-- Loading bar -->
+      <div id="jobLoading" class="hidden mt-4 w-full bg-slate-700 rounded h-2 overflow-hidden">
+        <div class="bg-indigo-500 h-2 animate-pulse" style="width: 100%"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="border border-slate-700 rounded-lg p-6 bg-slate-800 shadow-sm">
+      <h2 class="text-xl font-semibold text-white mb-4">Latest Results / Metrics</h2>
+      <div id="metrics" class="text-sm text-slate-400">
+        No recent training run. Train logs & mAP/PR curves will appear here.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Upload handling
+  function showUploadStatus(message, isError = false) {
+    const statusDiv = document.getElementById('uploadStatus');
+    statusDiv.textContent = message;
+    statusDiv.className = `mb-3 p-2 rounded text-sm ${isError ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`;
+    statusDiv.classList.remove('hidden');
+  }
+
+  document.getElementById('uploadBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+      showUploadStatus('Please select a file to upload', true);
+      return;
+    }
+
+    if (!file.name.endsWith('.zip')) {
+      showUploadStatus('Please select a ZIP file', true);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    
+    try {
+      const response = await fetch('/upload-dataset', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        showUploadStatus(`✓ File "${file.name}" uploaded successfully!`);
+        fileInput.value = ''; // Clear the input
+      } else {
+        showUploadStatus(`Upload failed: ${result.error}`, true);
+      }
+    } catch (error) {
+      showUploadStatus(`Upload failed: ${error.message}`, true);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Upload';
+    }
+  });
+
+  async function triggerJob(endpoint, jobName, formData) {
+    document.getElementById('jobLoading').classList.remove('hidden');
+    document.getElementById('metrics').textContent = `${jobName} job running...`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        // Poll job status every 5s
+        const poll = setInterval(async () => {
+          const statusRes = await fetch(`/job-status/${jobName}`);
+          const statusData = await statusRes.json();
+
+          if (statusData.succeeded > 0) {
+            clearInterval(poll);
+            document.getElementById('jobLoading').classList.add('hidden');
+            
+            // Get detailed results for preprocess jobs
+            if (jobName === 'preprocess') {
+              try {
+                const logsRes = await fetch(`/job-logs/${jobName}`);
+                const logsData = await logsRes.json();
+                
+                if (logsData.preprocess_summary) {
+                  displayPreprocessResults(logsData.preprocess_summary);
+                } else {
+                  document.getElementById('metrics').textContent = 'Preprocess job completed successfully.';
+                }
+              } catch (err) {
+                document.getElementById('metrics').textContent = 'Preprocess job completed successfully.';
+              }
+            } else {
+              document.getElementById('metrics').textContent = `${jobName} job completed successfully.`;
+            }
+          }
+          if (statusData.failed > 0) {
+            clearInterval(poll);
+            document.getElementById('jobLoading').classList.add('hidden');
+            document.getElementById('metrics').textContent = `${jobName} job failed.`;
+          }
+        }, 5000); // Reduced to 5s for better responsiveness
+      } else {
+        document.getElementById('jobLoading').classList.add('hidden');
+        document.getElementById('metrics').textContent = `Error: ${data.message}`;
+      }
+    } catch (err) {
+      document.getElementById('jobLoading').classList.add('hidden');
+      document.getElementById('metrics').textContent = `Error: ${err.message}`;
+    }
+  }
+
+  function displayPreprocessResults(summary) {
+    const metricsDiv = document.getElementById('metrics');
+    
+    if (summary.status === 'success' && Object.keys(summary.splits).length > 0) {
+      let html = '<div class="preprocess-results">';
+      html += '<h4 class="text-lg font-semibold text-green-600 mb-2">✅ Preprocess Completed Successfully</h4>';
+      html += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">';
+      
+      // Display each split
+      for (const [splitName, stats] of Object.entries(summary.splits)) {
+        html += `
+          <div class="bg-gray-50 p-3 rounded-lg">
+            <h5 class="font-medium text-gray-800 capitalize">${splitName} Split</h5>
+            <div class="text-sm text-gray-600 mt-1">
+              <div>📸 Images: <span class="font-medium">${stats.images}</span></div>
+              <div>🏠 Polygons: <span class="font-medium">${stats.polygons}</span></div>
+              <div>🔗 Pairs: <span class="font-medium">${stats.pairs}</span></div>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+      html += `<div class="text-sm text-gray-700 border-t pt-2">
+        <strong>Total:</strong> ${summary.total_images} images, ${summary.total_polygons} polygons
+      </div>`;
+      html += '</div>';
+      
+      metricsDiv.innerHTML = html;
+    } else {
+      metricsDiv.textContent = 'Preprocess job completed but no results found.';
+    }
+  }
+
+  // Preprocess button
+  document.getElementById('btnPreprocess').addEventListener('click', (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    // Use the uploaded filename from the last successful upload
+    const fileInput = document.getElementById('fileInput');
+    let datasetPath = "aiad_data.zip"; // default fallback
+    
+    // Check if there's an uploaded file name we can use
+    const statusDiv = document.getElementById('uploadStatus');
+    if (!statusDiv.classList.contains('hidden') && statusDiv.textContent.includes('uploaded successfully')) {
+      // Extract filename from status message
+      const match = statusDiv.textContent.match(/File "([^"]+)" uploaded successfully/);
+      if (match) {
+        datasetPath = `/data/raw/${match[1]}`;
+      }
+    }
+    
+    formData.append("dataset", datasetPath);
+    formData.append("img_size", document.getElementById('imgsz').value);
+    triggerJob('/trigger-preprocess', 'preprocess', formData);
+  });
+
+  // Train button
+  document.getElementById('btnTrain').addEventListener('click', (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("base_weights", document.getElementById('baseWeights').value);
+    formData.append("img_size", document.getElementById('imgsz').value);
+    formData.append("epochs", document.getElementById('epochs').value);
+    formData.append("batch", document.getElementById('batch').value);
+    triggerJob('/trigger-train', 'train', formData);
+  });
+</script>
+{% endblock %}
