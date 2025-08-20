@@ -1,0 +1,929 @@
+Commit: 6a8b80ade5da89916c0f21e754cc2dd3050c7248
+Date: 2025-08-20 13:38:38 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Canary 2nd try: fixed folder not found
+0	0	data-copier-pod.yaml
+3	3	docker-cmd-sketch.txt
+42	14	images/infer-cpu/app/infer_api.py
+2	2	images/infer/app/infer_api.py
+2	2	images/ui/app/app.py
+2	2	images/worker-cpu/app/preprocess.py
+53	38	images/worker-cpu/app/train.py
+2	2	images/worker/app/preprocess.py
+0	0	job-preprocess-cpu.yaml
+0	0	job-train-cpu.yaml
+0	0	k8s/cpu/infrastructure/kustomization.yaml
+4	4	k8s/cpu/kustomization.yaml
+0	0	k8s/cpu/services/kustomization.yaml
+57	0	setup_canary_test.sh
+
+Commit: 9478f10c4831e27337bff682329a04102c01ea5a
+Date: 2025-08-20 04:29:23 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: canary rollout test
+393	0	CANARY-DEPLOYMENT.md
+125	16	images/infer-cpu/app/infer_api.py
+14	2	images/ui-cpu/app/app.py
+56	0	images/ui-cpu/app/templates/index.html
+23	0	images/ui-cpu/app/templates/inference.html
+58	8	images/worker-cpu/app/train.py
+234	0	test_canary_deployment.py
+180	0	test_canary_deployment_k8s.py
+
+Commit: eafae19b273be768a97a74b790e57a82e02602c4
+Date: 2025-08-20 04:29:03 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #14 from myriosMin/jinbin-640
+Commit: 974a83a2c1e66252b05cd5a7d5bdda02ea3bc170
+Date: 2025-08-20 04:28:12 +0800
+Author: LimJinBin32
+Committer: LimJinBin32
+Message: change imgz to 640
+3	3	docker-cmd-sketch.txt
+2	2	images/infer-cpu/app/infer_api.py
+2	2	images/infer/app/infer_api.py
+2	2	images/ui-cpu/app/app.py
+4	4	images/ui/app/app.py
+2	2	images/worker-cpu/app/preprocess.py
+1	1	images/worker-cpu/app/train.py
+2	2	images/worker/app/preprocess.py
+
+Commit: 9aab70ea404b0d3f6458d7704c8ac245a3a6d437
+Date: 2025-08-20 04:14:28 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #13 from myriosMin/min-cpu
+Commit: 18ff15f148a525b81b8b6cd5cb15d2d0ef081565
+Date: 2025-08-20 04:13:41 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge branch 'main' into min-cpu
+Commit: ff1a349d6a51e47eef102f16a898dcc12282c094
+Date: 2025-08-20 03:30:43 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: routed training log to ui
+0	1	Makefile
+123	4	images/ui-cpu/app/app.py
+143	21	images/ui-cpu/app/templates/index.html
+1	1	images/ui/app/templates/index.html
+17	0	images/worker-cpu/app/train.py
+1	1	k8s/base/job-train.yaml
+
+Commit: 0d0889e8c5d9a66222b97bdfae06e0a2b3b6953d
+Date: 2025-08-20 02:24:58 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Windows Patch
+24	49	Makefile
+
+Commit: a0384994e5f13bfe704d344789c374c21134550a
+Date: 2025-08-20 02:10:53 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Windows compatible paths
+48	23	Makefile
+37	0	README.md
+8	8	scripts/deploy_cpu.sh
+
+Commit: ddee604216f8b5e72250fc94ae73ed05ee7e0b99
+Date: 2025-08-20 02:01:13 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Removed MinIO, Redis, Enhanced features
+2	20	Makefile
+3	3	images/ui-cpu/app/templates/inference.html
+1	16	k8s/base/configmap-app.yaml
+1	1	k8s/base/deploy-ui.yaml
+0	6	k8s/base/kustomization.yaml
+0	5	k8s/base/secret-app.yaml
+0	44	k8s/cpu/infrastructure/kustomization.yaml
+0	1	k8s/cpu/kustomization-infrastructure.yaml
+4	47	k8s/cpu/kustomization-services.yaml
+0	110	k8s/cpu/services/kustomization.yaml
+
+Commit: 7aa10c20b53081964cbe158b171ce0e8735d5292
+Date: 2025-08-20 01:41:37 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Full cpu code
+3	3	images/worker/app/train.py
+29	8	k8s/base/configmap-app.yaml
+11	2	k8s/base/secret-app.yaml
+
+Commit: 95af7312c625b318d2bbc6c8084c33fe1b639b06
+Date: 2025-08-20 01:26:04 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Add complete CPU deployment setup
+67	1	Makefile
+34	0	README.md
+30	0	images/infer-cpu/Dockerfile
+290	0	images/infer-cpu/app/infer_api.py
+6	0	images/infer-cpu/requirements.txt
+39	0	images/ui-cpu/Dockerfile
+599	0	images/ui-cpu/app/app.py
+11	0	images/ui-cpu/app/static/css/tailwind.config.js
+3	0	images/ui-cpu/app/static/css/tailwind.css
+0	0	images/ui-cpu/app/static/js/app.js
+34	0	images/ui-cpu/app/templates/base.html
+248	0	images/ui-cpu/app/templates/index.html
+213	0	images/ui-cpu/app/templates/inference.html
+4	0	images/ui-cpu/app/wsgi.py
+4	0	images/ui-cpu/requirements.txt
+25	0	images/worker-cpu/Dockerfile
+11	0	images/worker-cpu/app/common.py
+191	0	images/worker-cpu/app/preprocess.py
+166	0	images/worker-cpu/app/train.py
+4	0	images/worker-cpu/requirements.txt
+29	18	k8s/base/deploy-infer.yaml
+26	11	k8s/base/deploy-ui.yaml
+6	7	k8s/base/job-preprocess.yaml
+6	7	k8s/base/job-train.yaml
+13	7	k8s/base/kustomization.yaml
+1	1	k8s/base/pvc-datasets.yaml
+1	1	k8s/base/pvc-models.yaml
+1	1	k8s/base/pvc-outputs.yaml
+38	0	k8s/base/rbac-ui.yaml
+79	0	k8s/cpu/README.md
+44	0	k8s/cpu/infrastructure/kustomization.yaml
+44	0	k8s/cpu/kustomization-infrastructure.yaml
+110	0	k8s/cpu/kustomization-services.yaml
+65	0	k8s/cpu/kustomization.yaml
+110	0	k8s/cpu/services/kustomization.yaml
+44	0	scripts/deploy_cpu.sh
+
+Commit: 8046c07dc8f11331634e866f728d5cb4bcf66ed4
+Date: 2025-08-19 20:38:21 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Untracked MinIo client file
+2	2	.gitignore
+
+Commit: 2969e89b53d080a8b593fc60b92310043ad4fbac
+Date: 2025-08-19 20:36:49 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: further cleaning
+3	0	.gitignore
+-	-	preprocess.yaml => k8s/base/preprocess.yaml
+
+Commit: 524c20303021aa1caa5fce298133382820c08628
+Date: 2025-08-19 20:35:40 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Cleaned dir, add back readme
+165	0	README.md
+1	1	k8s/base/ingress.yaml
+-	-	result.zip
+
+Commit: 7f98b215f87a77bea349dee64451fc54a7b56e25
+Date: 2025-08-19 20:01:09 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Added infer to ingress rules. Batch process file downloadable via curl only. Needs fixing
+0	165	README.md
+10	4	images/infer/app/infer_api.py
+23	2	k8s/base/ingress.yaml
+-	-	result.zip
+
+Commit: 1d3334d2a33d7e0d226147316ecd448ce9dec80e
+Date: 2025-08-19 18:49:25 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Added to UI pod capability to create jobs. Major feature
+1	1	docker-cmd-sketch.txt
+34	66	images/ui/app/app.py
+1	1	images/ui/app/templates/index.html
+5	15	k8s/base/configmap-app.yaml
+15	40	k8s/base/deploy-ui.yaml
+47	0	k8s/base/job-preprocess-cm.yaml
+6	7	k8s/base/job-preprocess.yaml
+54	0	k8s/base/job-train-cm.yaml
+11	12	k8s/base/job-train.yaml
+4	3	k8s/base/kustomization.yaml
+13	0	k8s/base/role-ui-jobs.yaml
+13	0	k8s/base/rolebinding-ui-job-runner.yaml
+
+Commit: a421a89a5d97bd990c3f4048eb75bc72b231f6d8
+Date: 2025-08-19 03:01:16 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Reviewed current job request structure and minor changes
+1	2	Makefile
+
+Commit: 5c122ee2e8351e5d2820c508d0113ccb80369535
+Date: 2025-08-19 02:42:55 +0800
+Author: Mohammad Habib
+Committer: GitHub
+Message: Merge pull request #11 from myriosMin/habib-minio
+Commit: 0b9f17e775518dc848def0b18f3dd8f6174a3281
+Date: 2025-08-19 02:31:42 +0800
+Author: habibmohammad35
+Committer: habibmohammad35
+Message: Fixed initial start up logic to stop errors & upload basic data to minio
+3	0	.vscode/settings.json
+35	29	Makefile
+1	1	k8s/base/configmap-app.yaml
+-	-	mc
+
+Commit: c5cfa82685aeea0d1004b5d210960b7ea1579044
+Date: 2025-08-18 19:32:40 +0800
+Author: LimJinBin32
+Committer: LimJinBin32
+Message: progress on preprocess error
+7	3	Makefile
+2	1	images/ui/app/app.py
+18	0	k8s/base/allow-preprocess-to-minio.yaml
+23	0	k8s/base/allow-ui-configmap-patch.yaml
+17	0	k8s/base/allow-ui-ingress.yaml
+37	0	k8s/base/deploy-ui.yaml
+4	0	k8s/base/kustomization.yaml
+0	12	k8s/base/minio-pvc.yaml
+
+Commit: 61f404edac6b7af8e663e132c451dce703e9b354
+Date: 2025-08-18 13:24:33 +0800
+Author: LimJinBin32
+Committer: LimJinBin32
+Message: getting the data to be stored persistently on MinIO
+4	1	Makefile
+2	2	images/ui/app/app.py
+1	1	images/worker/app/common.py
+54	9	images/worker/app/preprocess.py
+3	1	k8s/base/configmap-app.yaml
+29	1	k8s/base/minio-pvc.yaml
+27	1	k8s/base/pvc-datasets.yaml
+
+Commit: 18a437692586de31246c231e497759c805425395
+Date: 2025-08-17 15:13:43 +0800
+Author: LimJinBin32
+Committer: LimJinBin32
+Message: made MinIO work
+8	1	Makefile
+12	2	images/ui/Dockerfile
+80	14	images/ui/app/app.py
+4	4	images/ui/app/templates/index.html
+2	1	images/ui/requirements.txt
+2	1	images/worker/requirements.txt
+45	0	k8s/base/minio-deployment.yaml
+5	0	k8s/base/minio-namespace.yaml
+11	0	k8s/base/minio-pvc.yaml
+10	0	k8s/base/minio-secret.yaml
+19	0	k8s/base/minio-service.yaml
+-	-	preprocess.yaml
+
+Commit: 8273c22f994aa2592e6a8e8697f10f3fb9b63532
+Date: 2025-08-17 00:38:47 +0800
+Author: LimJinBin32
+Committer: LimJinBin32
+Message: Fixing the upload and adding an indicator
+3	1	images/ui/app/app.py
+58	4	images/ui/app/templates/index.html
+7	0	k8s/base/deploy-ui.yaml
+
+Commit: 30693b529969840260f58e54095a044fdbe3e13d
+Date: 2025-08-16 13:20:45 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #10 from myriosMin/min-k8s
+Commit: a5a6f6bbc8c8112e338bec2e56550f8dff89f753
+Date: 2025-08-16 13:20:21 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge branch 'main' into min-k8s
+Commit: 9de45c61cf9d9b764706ee5103f65143078648ab
+Date: 2025-08-16 13:16:36 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: k8s test3; connections working except volumes
+44	44	.dockerignore
+1	1	.env.example
+147	147	.gitignore
+151	132	Makefile
+165	153	README.md
+63	62	docker-cmd-sketch.txt
+23	23	images/infer/Dockerfile
+285	285	images/infer/app/infer_api.py
+5	5	images/infer/requirements.txt
+36	36	images/ui/Dockerfile
+175	133	images/ui/app/app.py
+10	10	images/ui/app/static/css/tailwind.config.js
+2	2	images/ui/app/static/css/tailwind.css
+33	33	images/ui/app/templates/base.html
+132	126	images/ui/app/templates/index.html
+137	137	images/ui/app/templates/inference.html
+3	3	images/ui/app/wsgi.py
+2	2	images/ui/requirements.txt
+22	22	images/worker/Dockerfile
+10	10	images/worker/app/common.py
+190	190	images/worker/app/preprocess.py
+165	165	images/worker/app/train.py
+3	3	images/worker/requirements.txt
+27	27	k8s/base/configmap-app.yaml
+94	85	k8s/base/deploy-infer.yaml
+80	80	k8s/base/deploy-ui.yaml
+20	20	k8s/base/hpa-infer.yaml
+20	20	k8s/base/hpa-ui.yaml
+19	19	k8s/base/ingress.yaml
+41	40	k8s/base/job-preprocess.yaml
+68	55	k8s/base/job-train.yaml
+28	28	k8s/base/kustomization.yaml
+3	3	k8s/base/namespace.yaml
+16	16	k8s/base/netpol-allow-egress-web.yaml
+19	19	k8s/base/netpol-allow-ui-infer.yaml
+9	9	k8s/base/netpol-default-deny.yaml
+17	17	k8s/base/netpol-egress-dns.yaml
+11	11	k8s/base/pdb-infer.yaml
+11	11	k8s/base/pdb-ui.yaml
+10	10	k8s/base/pvc-datasets.yaml
+10	10	k8s/base/pvc-models.yaml
+11	11	k8s/base/pvc-outputs.yaml
+8	8	k8s/base/secret-app.yaml
+12	12	k8s/dev/kustomization.yaml
+
+Commit: 6e893e456a9ca56af7fcc164b1de2a57f75216a5
+Date: 2025-08-16 08:50:35 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: k8s test2: updated flask to match endpoints + docker paths
+1	0	.gitignore
+17	14	Makefile
+41	1	docker-cmd-sketch.txt
+2	2	images/infer/Dockerfile
+6	6	images/ui/Dockerfile
+107	28	images/ui/app/app.py
+84	15	images/ui/app/templates/index.html
+115	24	images/ui/app/templates/inference.html
+2	2	images/worker/Dockerfile
+4	0	k8s/base/deploy-infer.yaml
+9	0	k8s/base/job-train.yaml
+2	0	k8s/base/kustomization.yaml
+17	0	k8s/base/netpol-allow-egress-web.yaml
+1	1	k8s/base/pvc-datasets.yaml
+1	1	k8s/base/pvc-models.yaml
+11	0	k8s/base/pvc-outputs.yaml
+
+Commit: 0d125fa871cbf848be2b088c51ab2a9a3a8695fb
+Date: 2025-08-15 11:03:41 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #9 from myriosMin/myriosMin-patch-3
+Commit: 2c098291cdbb8f64606015a6de5c7b485d3131dd
+Date: 2025-08-15 11:03:25 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Update README.md
+0	2	README.md
+
+Commit: c5a9b0c592acdbdec942480ee7959ed71454dd5d
+Date: 2025-08-15 11:02:48 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #8 from myriosMin/myriosMin-patch-2
+Commit: 8d80d77e2afb61c0c412bced974f358036fe268a
+Date: 2025-08-15 11:02:31 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: make init to make all
+3	3	Makefile
+
+Commit: 70b3d907214f44edd53273d94f77fe865c12c414
+Date: 2025-08-15 10:46:11 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #7 from myriosMin/myriosMin-patch-1
+Commit: 217a1680f01dddef82b16d375456603f6f7c1d84
+Date: 2025-08-15 10:45:57 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Remove svc yaml from kustomization
+1	3	k8s/base/kustomization.yaml
+
+Commit: 29383f2955592f049b83a85b6be85a1a09f2b494
+Date: 2025-08-15 10:44:32 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #6 from myriosMin/min-k8s
+Commit: 4ab6f69e687898881d1687eb2de7ce958591f42a
+Date: 2025-08-15 10:44:19 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Update k8s/base/kustomization.yaml
+1	1	k8s/base/kustomization.yaml
+
+Commit: 54e545c3405c6205f535660d46d47944b5474257
+Date: 2025-08-15 10:41:42 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: k8s initial test
+129	0	Makefile
+153	0	README.md
+1	1	docker-cmd-sketch.txt
+13	1	images/infer/app/infer_api.py
+1	4	images/worker/app/preprocess.py
+23	2	images/worker/app/train.py
+28	0	k8s/base/configmap-app.yaml
+82	0	k8s/base/deploy-infer.yaml
+81	0	k8s/base/deploy-ui.yaml
+21	0	k8s/base/hpa-infer.yaml
+21	0	k8s/base/hpa-ui.yaml
+20	0	k8s/base/ingress.yaml
+40	0	k8s/base/job-preprocess.yaml
+46	0	k8s/base/job-train.yaml
+28	0	k8s/base/kustomization.yaml
+4	0	k8s/base/namespace.yaml
+20	0	k8s/base/netpol-allow-ui-infer.yaml
+10	0	k8s/base/netpol-default-deny.yaml
+18	0	k8s/base/netpol-egress-dns.yaml
+12	0	k8s/base/pdb-infer.yaml
+12	0	k8s/base/pdb-ui.yaml
+10	0	k8s/base/pvc-datasets.yaml
+10	0	k8s/base/pvc-models.yaml
+9	0	k8s/base/secret-app.yaml
+13	0	k8s/dev/kustomization.yaml
+0	0	scripts/dev_minikube_env.sh
+0	0	scripts/tailwind_build.sh
+
+Commit: 49ac2a59864d16f2e5111144ed99d363301a70e6
+Date: 2025-08-15 08:12:45 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #4 from myriosMin/min-infer
+Commit: 5a7f7edee20c2036c0b5a01e2ccb5ef39947b86e
+Date: 2025-08-15 08:12:30 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge branch 'main' into min-infer
+Commit: 53d5c4f1bbd4570e76e29aeb53b13e59ffbc015e
+Date: 2025-08-15 08:11:09 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: remove duplicate import
+0	1	images/worker/app/preprocess.py
+
+Commit: 41ee78d94556779d00cefed61ac18959f02037ba
+Date: 2025-08-15 08:10:52 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: no image fail-safe
+2	0	images/worker/app/train.py
+
+Commit: bd1cd082d5eeb2899a796dd21ffd9a0539760c49
+Date: 2025-08-15 01:23:10 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #5 from myriosMin/min-train
+Commit: 8264a1a4f5628928c33f25b79bcee20058d49133
+Date: 2025-08-15 01:22:35 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: remove duplicate import
+0	1	images/worker/app/preprocess.py
+
+Commit: e7e24ea6d24622a527b69e7df5ac6212640d7916
+Date: 2025-08-15 01:21:29 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Null image fail-safe
+2	0	images/worker/app/train.py
+
+Commit: 39364524353b616e284dbcf3bdcd5102527abba0
+Date: 2025-08-15 01:20:14 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #3 from myriosMin/min-preprocess
+Commit: 3011fe4cd226f337738e32861cecbb6667fc20f4
+Date: 2025-08-15 01:20:03 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge branch 'main' into min-preprocess
+Commit: 7372404921e775bcb127008f05256a80303c5bc4
+Date: 2025-08-15 01:17:51 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: prevent traversal attack
+5	1	images/ui/app/app.py
+
+Commit: fd0df84196f0e3fab463e259a84f1474a9e4c8b8
+Date: 2025-08-15 01:16:47 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: prevent traversal attack
+2	1	images/ui/app/app.py
+
+Commit: 083c912541e4feb59ea935a07f33e56ba6b8b791
+Date: 2025-08-15 01:16:21 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: combined import
+2	1	images/worker/app/common.py
+
+Commit: 540556904702be88820169a8f7a29b6313309638
+Date: 2025-08-15 01:16:07 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: efficient pair counting
+4	1	images/worker/app/preprocess.py
+
+Commit: b42a29f3f762efc6ff527f4865b812898f04d0e0
+Date: 2025-08-15 01:15:33 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Delete duplicate import
+0	1	images/worker/app/preprocess.py
+
+Commit: e51188d007cf81406d2ec82b991926690cccdd88
+Date: 2025-08-15 01:13:35 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Merge pull request #1 from myriosMin/min-ui
+Commit: 500a0801210bc33c8c57d851a96b6271c1c6d0e2
+Date: 2025-08-15 01:12:14 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Update images/ui/app/app.py
+2	0	images/ui/app/app.py
+
+Commit: e664accc1aa9584ad2f5b0e91a5a507555411226
+Date: 2025-08-15 01:11:51 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Update images/ui/app/app.py
+4	1	images/ui/app/app.py
+
+Commit: a5922ee7a45819ab88afb94b020da873f009b508
+Date: 2025-08-15 01:11:38 +0800
+Author: Min Phyo Thura
+Committer: GitHub
+Message: Update images/ui/app/app.py
+1	1	images/ui/app/app.py
+
+Commit: cae312964b5c0ba9c5eb15ac879f6e536fff0412
+Date: 2025-08-15 01:06:21 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: single+batch inference with Docker
+5	1	docker-cmd-sketch.txt
+
+Commit: 0e5a7bcba329c2b11487c559993671dfdd606c56
+Date: 2025-08-15 00:46:27 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: batch inferencing
+1	0	.gitignore
+17	3	images/infer/Dockerfile
+109	1	images/infer/app/{infer.py => infer_api.py}
+1	1	images/infer/requirements.txt
+
+Commit: f152429c9dd02e459faf5201c8fe631e139b1142
+Date: 2025-08-14 23:59:25 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: added models folder
+1	1	.gitignore
+0	0	models/.gitkeep
+
+Commit: d6bb060de736002028c7d4e5b5c495a2af32c152
+Date: 2025-08-14 23:57:22 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Base inference code
+3	0	.gitignore
+10	0	images/infer/Dockerfile
+166	0	images/infer/app/infer.py
+6	0	images/infer/requirements.txt
+
+Commit: dbe80e32aff8002a06f5abc31b2301fe528bb920
+Date: 2025-08-14 22:09:32 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Base training with Docker
+4	1	.gitignore
+11	1	docker-cmd-sketch.txt
+1	1	images/worker/app/preprocess.py
+143	0	images/worker/app/train.py
+0	0	output/.gitkeep
+
+Commit: 7e04dab39311a7f0cb9f933e16571bfe4df98774
+Date: 2025-08-14 19:25:02 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Updated preprocessing to generate multi-class semantic detection labels
+1	2	.gitignore
+0	0	data/aiad_data/.gitkeep
+3	3	docker-cmd-sketch.txt
+2	2	images/worker/app/common.py
+166	90	images/worker/app/preprocess.py
+1	1	images/worker/requirements.txt
+
+Commit: ba3117f63a44fa21d737233d19aa61f83167e162
+Date: 2025-08-12 21:42:16 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Keep data folder structure
+4	1	.gitignore
+0	0	data/aiad_data/.gitkeep
+0	0	data/yolo_xbd/.gitkeep
+
+Commit: 5a9b7b2bd01c77b37ce4c2e7bad56e5df7e0cbc5
+Date: 2025-08-12 21:38:37 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: delete data pushed by accident
+2	2	.gitignore
+-	-	data/aiad_data/test/images/guatemala-volcano_00000003_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000003_pre_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000005_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000005_pre_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000009_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000009_pre_disaster.png
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000003_post_disaster.json
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000003_pre_disaster.json
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000005_post_disaster.json
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000005_pre_disaster.json
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000009_post_disaster.json
+0	1	data/aiad_data/test/labels/guatemala-volcano_00000009_pre_disaster.json
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000003_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000003_pre_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000005_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000005_pre_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000009_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000009_pre_disaster_target.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000004_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000004_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000012_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000012_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000014_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000014_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000020_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000020_pre_disaster.png
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000004_post_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000004_pre_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000012_post_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000012_pre_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000014_post_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000014_pre_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000020_post_disaster.json
+0	1	data/aiad_data/tier3/labels/guatemala-volcano_00000020_pre_disaster.json
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000004_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000004_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000012_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000012_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000014_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000014_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000020_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000020_pre_disaster_target.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000000_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000000_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000001_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000001_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000002_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000002_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000006_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000006_pre_disaster.png
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000000_post_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000000_pre_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000001_post_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000001_pre_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000002_post_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000002_pre_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000006_post_disaster.json
+0	1	data/aiad_data/train/labels/guatemala-volcano_00000006_pre_disaster.json
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000000_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000000_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000001_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000001_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000002_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000002_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000006_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000006_pre_disaster_target.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000003_post_disaster.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000005_post_disaster.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000009_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000004_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000012_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000014_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000020_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000000_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000001_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000002_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000006_post_disaster.png
+0	3	data/yolo_xbd/labels/test/guatemala-volcano_00000003_post_disaster.txt
+0	1	data/yolo_xbd/labels/test/guatemala-volcano_00000005_post_disaster.txt
+0	4	data/yolo_xbd/labels/test/guatemala-volcano_00000009_post_disaster.txt
+0	20	data/yolo_xbd/labels/tier3/guatemala-volcano_00000004_post_disaster.txt
+0	33	data/yolo_xbd/labels/tier3/guatemala-volcano_00000012_post_disaster.txt
+0	7	data/yolo_xbd/labels/tier3/guatemala-volcano_00000014_post_disaster.txt
+0	36	data/yolo_xbd/labels/tier3/guatemala-volcano_00000020_post_disaster.txt
+0	10	data/yolo_xbd/labels/train/guatemala-volcano_00000000_post_disaster.txt
+0	4	data/yolo_xbd/labels/train/guatemala-volcano_00000001_post_disaster.txt
+0	1	data/yolo_xbd/labels/train/guatemala-volcano_00000002_post_disaster.txt
+0	97	data/yolo_xbd/labels/train/guatemala-volcano_00000006_post_disaster.txt
+
+Commit: a03b37a84a418665f2d39168f194f70405c4866b
+Date: 2025-08-12 21:36:34 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: preprocessing with docker
+2	0	.env.example
+-	-	data/aiad_data/test/images/guatemala-volcano_00000003_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000003_pre_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000005_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000005_pre_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000009_post_disaster.png
+-	-	data/aiad_data/test/images/guatemala-volcano_00000009_pre_disaster.png
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000003_post_disaster.json
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000003_pre_disaster.json
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000005_post_disaster.json
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000005_pre_disaster.json
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000009_post_disaster.json
+1	0	data/aiad_data/test/labels/guatemala-volcano_00000009_pre_disaster.json
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000003_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000003_pre_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000005_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000005_pre_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000009_post_disaster_target.png
+-	-	data/aiad_data/test/targets/guatemala-volcano_00000009_pre_disaster_target.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000004_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000004_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000012_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000012_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000014_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000014_pre_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000020_post_disaster.png
+-	-	data/aiad_data/tier3/images/guatemala-volcano_00000020_pre_disaster.png
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000004_post_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000004_pre_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000012_post_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000012_pre_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000014_post_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000014_pre_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000020_post_disaster.json
+1	0	data/aiad_data/tier3/labels/guatemala-volcano_00000020_pre_disaster.json
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000004_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000004_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000012_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000012_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000014_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000014_pre_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000020_post_disaster_target.png
+-	-	data/aiad_data/tier3/targets/guatemala-volcano_00000020_pre_disaster_target.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000000_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000000_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000001_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000001_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000002_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000002_pre_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000006_post_disaster.png
+-	-	data/aiad_data/train/images/guatemala-volcano_00000006_pre_disaster.png
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000000_post_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000000_pre_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000001_post_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000001_pre_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000002_post_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000002_pre_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000006_post_disaster.json
+1	0	data/aiad_data/train/labels/guatemala-volcano_00000006_pre_disaster.json
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000000_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000000_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000001_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000001_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000002_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000002_pre_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000006_post_disaster_target.png
+-	-	data/aiad_data/train/targets/guatemala-volcano_00000006_pre_disaster_target.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000003_post_disaster.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000005_post_disaster.png
+-	-	data/yolo_xbd/images/test/guatemala-volcano_00000009_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000004_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000012_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000014_post_disaster.png
+-	-	data/yolo_xbd/images/tier3/guatemala-volcano_00000020_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000000_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000001_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000002_post_disaster.png
+-	-	data/yolo_xbd/images/train/guatemala-volcano_00000006_post_disaster.png
+3	0	data/yolo_xbd/labels/test/guatemala-volcano_00000003_post_disaster.txt
+1	0	data/yolo_xbd/labels/test/guatemala-volcano_00000005_post_disaster.txt
+4	0	data/yolo_xbd/labels/test/guatemala-volcano_00000009_post_disaster.txt
+20	0	data/yolo_xbd/labels/tier3/guatemala-volcano_00000004_post_disaster.txt
+33	0	data/yolo_xbd/labels/tier3/guatemala-volcano_00000012_post_disaster.txt
+7	0	data/yolo_xbd/labels/tier3/guatemala-volcano_00000014_post_disaster.txt
+36	0	data/yolo_xbd/labels/tier3/guatemala-volcano_00000020_post_disaster.txt
+10	0	data/yolo_xbd/labels/train/guatemala-volcano_00000000_post_disaster.txt
+4	0	data/yolo_xbd/labels/train/guatemala-volcano_00000001_post_disaster.txt
+1	0	data/yolo_xbd/labels/train/guatemala-volcano_00000002_post_disaster.txt
+97	0	data/yolo_xbd/labels/train/guatemala-volcano_00000006_post_disaster.txt
+7	1	docker-cmd-sketch.txt
+23	0	images/worker/Dockerfile
+2	0	images/worker/app/preprocess.py
+0	0	images/worker/app/train.py
+
+Commit: 642b583398b556f50bbd3b33fd9d9db3b05cbc4c
+Date: 2025-08-12 20:12:25 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Remove tracked images and labels added by mistake
+2	2	.dockerignore
+2	2	.gitignore
+-	-	yolo_xbd/images/test/guatemala-volcano_00000003_post_disaster.png
+-	-	yolo_xbd/images/test/guatemala-volcano_00000005_post_disaster.png
+-	-	yolo_xbd/images/test/guatemala-volcano_00000009_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000004_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000012_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000014_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000020_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000000_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000001_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000002_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000006_post_disaster.png
+0	3	yolo_xbd/labels/test/guatemala-volcano_00000003_post_disaster.txt
+0	1	yolo_xbd/labels/test/guatemala-volcano_00000005_post_disaster.txt
+0	4	yolo_xbd/labels/test/guatemala-volcano_00000009_post_disaster.txt
+0	20	yolo_xbd/labels/tier3/guatemala-volcano_00000004_post_disaster.txt
+0	33	yolo_xbd/labels/tier3/guatemala-volcano_00000012_post_disaster.txt
+0	7	yolo_xbd/labels/tier3/guatemala-volcano_00000014_post_disaster.txt
+0	36	yolo_xbd/labels/tier3/guatemala-volcano_00000020_post_disaster.txt
+0	10	yolo_xbd/labels/train/guatemala-volcano_00000000_post_disaster.txt
+0	4	yolo_xbd/labels/train/guatemala-volcano_00000001_post_disaster.txt
+0	1	yolo_xbd/labels/train/guatemala-volcano_00000002_post_disaster.txt
+0	97	yolo_xbd/labels/train/guatemala-volcano_00000006_post_disaster.txt
+
+Commit: 2711901063dfe6df5737d7f62066d1586fa881ed
+Date: 2025-08-12 20:09:02 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Base preprocessing logic
+5	1	.dockerignore
+5	1	.gitignore
+10	0	images/worker/app/common.py
+114	0	images/worker/app/preprocess.py
+4	0	images/worker/requirements.txt
+-	-	yolo_xbd/images/test/guatemala-volcano_00000003_post_disaster.png
+-	-	yolo_xbd/images/test/guatemala-volcano_00000005_post_disaster.png
+-	-	yolo_xbd/images/test/guatemala-volcano_00000009_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000004_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000012_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000014_post_disaster.png
+-	-	yolo_xbd/images/tier3/guatemala-volcano_00000020_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000000_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000001_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000002_post_disaster.png
+-	-	yolo_xbd/images/train/guatemala-volcano_00000006_post_disaster.png
+3	0	yolo_xbd/labels/test/guatemala-volcano_00000003_post_disaster.txt
+1	0	yolo_xbd/labels/test/guatemala-volcano_00000005_post_disaster.txt
+4	0	yolo_xbd/labels/test/guatemala-volcano_00000009_post_disaster.txt
+20	0	yolo_xbd/labels/tier3/guatemala-volcano_00000004_post_disaster.txt
+33	0	yolo_xbd/labels/tier3/guatemala-volcano_00000012_post_disaster.txt
+7	0	yolo_xbd/labels/tier3/guatemala-volcano_00000014_post_disaster.txt
+36	0	yolo_xbd/labels/tier3/guatemala-volcano_00000020_post_disaster.txt
+10	0	yolo_xbd/labels/train/guatemala-volcano_00000000_post_disaster.txt
+4	0	yolo_xbd/labels/train/guatemala-volcano_00000001_post_disaster.txt
+1	0	yolo_xbd/labels/train/guatemala-volcano_00000002_post_disaster.txt
+97	0	yolo_xbd/labels/train/guatemala-volcano_00000006_post_disaster.txt
+
+Commit: 03fa52b17872db48706888aa9ea207cb8e675490
+Date: 2025-08-12 19:44:22 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Base UI with docker
+0	0	app/app.py
+0	0	app/static/css/tailwind.css
+0	0	app/templates/base.html
+0	0	app/templates/index.html
+0	0	app/templates/inference.html
+3	0	docker-cmd-sketch.txt
+37	0	images/ui/Dockerfile
+49	0	images/ui/app/app.py
+11	0	images/ui/app/static/css/tailwind.config.js
+3	0	images/ui/app/static/css/tailwind.css
+0	0	{app => images/ui/app}/static/js/app.js
+34	0	images/ui/app/templates/base.html
+58	0	images/ui/app/templates/index.html
+47	0	images/ui/app/templates/inference.html
+4	0	images/ui/app/wsgi.py
+3	0	images/ui/requirements.txt
+
+Commit: 649d7ac9df083a71fcde929a3ea820b2079867e0
+Date: 2025-08-12 18:34:58 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: UI Structure
+0	0	app/app.py
+0	0	app/static/css/tailwind.css
+0	0	app/static/js/app.js
+0	0	app/templates/base.html
+0	0	app/templates/index.html
+0	0	app/templates/inference.html
+
+Commit: 38ee9ec1a65d62c26f89fb11a69366ce511652ba
+Date: 2025-08-12 18:19:54 +0800
+Author: myriosMin
+Committer: myriosMin
+Message: Initial Commit
+41	0	.dockerignore
+134	0	.gitignore
+0	0	README.md

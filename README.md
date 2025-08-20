@@ -6,6 +6,10 @@
 .
 ├── Makefile                  # Automation commands for build, deploy, jobs
 ├── README.md                 # Project overview and instructions
+├── Xview2_yolo.ipynb         # Model consideration & development; done in colab - Min
+├── commit.md                 # Cleaned git logs (Contribution table)
+├── commit.txt                # Raw git logs
+├── docker-cmd-sketch.txt     # Draft Docker run commands
 ├── data                      # Datasets and YOLO-formatted data; put aiad_data.zip and test.zip here
 │   ├── aiad_data.zip         # Raw dataset archive
 │   ├── test.zip              # Test dataset archive
@@ -16,13 +20,12 @@
 │       ├── train_pairs.csv   # Pre/post image mapping for training set
 │       ├── val_pairs.csv     # Pre/post image mapping for validation set
 │       └── xbd6.yaml         # YOLO dataset configuration
-├── docker-cmd-sketch.txt     # Draft Docker run commands
 ├── images                    # Docker image source codes and build contexts
-│   ├── infer                 # Inference API container
+│   ├── infer/infer-cpu       # Inference API container
 │   │   ├── Dockerfile
 │   │   ├── app/infer_api.py  # FAST API
 │   │   └── requirements.txt
-│   ├── ui                    # UI container
+│   ├── ui/ui-cpu             # UI container
 │   │   ├── Dockerfile
 │   │   ├── app/app.py        # Flask backend
 │   │   ├── static/css        # Tailwind config & styles
@@ -30,17 +33,19 @@
 │   │   ├── templates         # HTML templates
 │   │   └── wsgi.py
 │   │   └── requirements.txt
-│   └── worker                # Preprocessing & training container
+│   └── worker/worker-cpu     # Preprocessing & training container
 │       ├── Dockerfile
 │       ├── app/common.py     # Common datasets
 │       ├── app/preprocess.py # Preprocessing from xBD to YOLO format
 │       ├── app/train.py      # YOLO multi-class detection training
 │       └── requirements.txt
 ├── k8s                       # Kubernetes manifests & kustomize configs
-│   ├── base                   # Base configs
+│   ├── base                  # Base configs
 │   │   ├── configmap-app.yaml
 │   │   ├── deploy-infer.yaml
 │   │   ├── deploy-ui.yaml
+│   │   ├── hpa-infer.yaml
+│   │   ├── hpa-ui.yaml
 │   │   ├── ingress.yaml
 │   │   ├── job-preprocess.yaml
 │   │   ├── job-train.yaml
@@ -48,103 +53,84 @@
 │   │   ├── namespace.yaml
 │   │   ├── pvc-datasets.yaml
 │   │   ├── pvc-models.yaml
+│   │   ├── pvc-outputs.yaml
 │   │   ├── secret-app.yaml
 │   │   ├── svc-infer.yaml
-│   │   └── svc-ui.yaml
-│   └── dev                    # Dev overlay configs
+│   │   ├── svc-ui.yaml
+│   │   ├── netpol-default-deny.yaml
+│   │   ├── netpol-allow-ui-infer.yaml
+│   │   ├── netpol-engress-web.yaml
+│   │   ├── netpol-egress-dns.yaml
+│   │   ├── rbac-ui.yaml
+│   │   ├── allow-preprocess-to-minio.yaml     # not-in-use
+│   │   ├── allow-ui-configmap-patch.yaml      # not-in-use
+│   │   ├── allow-ui-ingress.yaml              # not-in-use
+│   │   ├── minio-deployment.yaml              # not-in-use; intended for centralized persistent storage
+│   │   ├── minio-namespace.yaml               # not-in-use
+│   │   ├── minio-pvc.yaml                     # not-in-use
+│   │   ├── minio-secret.yaml                  # not-in-use
+│   │   ├── minio-service.yaml                 # not-in-use
+│   │   ├── pdb-infer.yaml                     # not-in-use; intended for load distribution
+│   │   └── pdb-ui.yaml                        # not-in-use; intended for load distribution 
+│   ├── cpu                                    # Cpu overlay configs
+│   │   ├── kustomization-infrastructure.yaml  # pvc and configs
+│   │   ├── kustomization-services.yaml        # infer, ui
+│   |   └── kustomization.yaml
+│   └── dev                                    # Dev overlay configs
 │       └── kustomization.yaml
-├── models                    # Trained model weights; put best.pt here
+├── models                                     # Trained model weights; put best.pt here
 │   └── best.pt
-├── output                    # Inference results and processed output
-│   ├── predictions           # Real-time inferences
-│   └── yolo_xbd_6ch          # Model training outputs
-└── scripts                   # Development utility scripts
+├── output                                     # Inference results and processed output
+│   ├── predictions                            # Real-time inferences
+│   └── yolo_xbd_6ch                           # Model training outputs
+└── scripts                                    # Development utility scripts
+    ├── deploy_cpu.sh
     ├── dev_minikube_env.sh
     └── tailwind_build.sh
 ```
+> 📃 Note for lecturer: Please also check out min-cpu branch. I tried out Canary model rollout deployment; it works, but it's difficult to test in our limited set-up, and so, I decided not to demo it during presentation. By right, if a new model is fine-tuned in UI, instead of it instantly replacing old one, like what it currently does, there will be two models serving at the same time: old model handling half the traffic and new model the other half. If there is no error and new model runs successful for the next 3 minutes (accuracy is usually monitored in actual deployment, but I just put a timer to point out the feasability), it will replace the old one. If not, old one remains. The old model remains in version control for roll back if necessary.
+
+> Some old, un-used files are also not cleaned up in purpose since they reflect our effort in debugging and brain-storming together. 
 
 # Quickstart (Essentials)
-
-## Cross-Platform Compatibility
-
-### Windows Users
-
-This project is now fully compatible with Windows. You have several options:
-
-**Option 1: Git Bash (Recommended)**
-- Install [Git for Windows](https://git-scm.com/download/win) which includes Git Bash
-- Use Git Bash terminal for all commands
-- Run commands normally: `make cpu-all`
-
-**Option 2: WSL (Windows Subsystem for Linux)**
-- Install WSL2 with Ubuntu
-- Install make: `sudo apt install make`
-- Use WSL terminal for all commands
-
-**Option 3: PowerShell with make**
-- Install make for Windows (via Chocolatey: `choco install make`)
-- Use PowerShell terminal
-- May need to escape quotes differently in some commands
-
-**Option 4: Docker Desktop with WSL2 Backend**
-- Install Docker Desktop for Windows
-- Enable WSL2 integration
-- Use WSL2 terminal
-
-### Cross-Platform Path Handling
-
-The Makefile automatically detects your operating system and uses the correct path separators:
-- Windows: Uses `\` for file paths
-- Linux/macOS: Uses `/` for file paths
-
-Test your platform setup:
-```bash
-make test-paths
-```
 
 ### What You Need to Fill In
 
 * Put `aiad_data.zip` under `/data` which includes raw xBD data, partially or full.
-* Put `best.pt` under `/models` to skip model training and do fine-tuning or inferencing.
+
 * Adjust epochs and pvc sizes as per your intended data input and storage restrictions.
 
-### Pre-installations
+### Pre-installations 
 
-* Make sure Docker and Minikube are installed.
-* Start minikube:
+* Make sure Docker, Minikube, and Make (for Windows) are installed.
+* Put `best.pt` under `/models` as the base model weights.
+* Start minikube (with ingress and metrics-server addons, if not enabled yet):
 ```bash
 minikube start
 minikube addons enable ingress
 minikube addons enable metrics-server
 ```
-* Run `minikube mount "ABS/PATH/TO/k8s-for-computer-vision-web-app/data:/data` in a separate terminal.
 
 ### 0. One-Shot Setup (Recommended)
 
-For the full pipeline — start Minikube, enable addons, build images, deploy, wait for pods, and print the UI URL — run:
-
-```bash
-make all
-```
-
-### 0.1. Lightweight CPU-Only Setup (For Testing)
-
-For a lightweight, CPU-only deployment with minimal resource requirements (perfect for testing and development):
+For a lightweight, CPU-only deployment with minimal resource requirements (perfect for testing and development); it builds the docker images inside minikube, copy base model to pvc, deploy the k8s components, then serve:
 
 ```bash
 make cpu-all
 ```
 
 **Benefits of CPU deployment:**
-- **Faster builds**: No CUDA dependencies, smaller images
+- **Faster builds**: No CUDA dependencies, smaller images (< 2GB for all images)
 - **Minimal storage**: 2Gi datasets, 1Gi models, 1Gi outputs (vs 20Gi/5Gi/10Gi)
 - **Lower resources**: 50m CPU UI, 100m CPU inference (vs 100m/250m)
-- **Quick iteration**: Perfect for development and CI/CD
+- **Quick iteration**: Perfect for development and CI/CD (and academic marking ^^)
 - **Cost effective**: Runs on any machine with minikube
 
 See `k8s/cpu/README.md` for detailed CPU deployment documentation.
 
-(*`make all` is an alias for `make init` in the Makefile.*)
+> ⚠️ Note: Train the model for 1 epoch with 1-2 batch size only since 6-channel yolo model training on CPU is quite resource intensive. Increase the resource limits in `k8s/base/job-train.yaml`. (Current limit took ~5 minutes on Intel i7-12700H.)
+
+> Follow the below step-by-step deployment if you did not run `make cpu-all`, or it failed.
 
 ---
 
@@ -157,20 +143,12 @@ make addons
 
 ### 2. Build Images Inside Minikube's Docker
 
-```bash
-make build
-```
-
 **For CPU-only lightweight builds:**
 ```bash
 make build-cpu
 ```
 
 ### 3. Deploy Everything (Namespace, PVCs, UI, Inference, Ingress)
-
-```bash
-make deploy
-```
 
 **For CPU-only lightweight deployment:**
 ```bash
@@ -185,30 +163,24 @@ Usually unnecessary: `app.localtest.me` resolves to `127.0.0.1` already.
 
 ```bash
 make ui
-# then browse http://app.localtest.me
+```
+then browse http://app.localtest.me, OR expose the url with minikube
+```bash
+minikube service ui -n xview
 ```
 
 ### 6. Upload and Train
 
-Upload raw **xBD** files on the **"Data & Training"** page. Then run:
+Upload raw **xBD** files (aiad_data.zip) on the **"Data & Training"** page in UI. Then run (preferably for manageable epoch and batch size for testing):
 
 ```bash
 make job-preprocess
 make job-train   # trains, saves runs and best.pt under /models
 ```
 
-**For CPU deployment with minimal test data:**
-```bash
-make prepare-data-cpu  # Uses smaller test dataset
-make job-preprocess
-make job-train         # Will be slower on CPU but uses same training logic
-```
-
 ### 7. Link Trained Weights to Inference Deployment
 
-Inference uses a fixed `/models/best.pt`. If it’s missing, it pulls a base `yolo11n-seg` model.
-
-**Simplest:** Bind the models PVC to both training and inference (already set). After training, copy/rename the desired `best.pt` to `/models/best.pt` in the PVC.
+Inference uses a fixed `/models/best.pt`. If it’s missing, it pulls a base `yolo11n-seg` model (for initial first-time training only; current set-up is fine-tuning, and you must put `best.pt` under `models` before any make commands).
 
 ```bash
 kubectl -n xview rollout restart deploy/infer
@@ -216,7 +188,9 @@ kubectl -n xview rollout restart deploy/infer
 
 ### 8. Run Inference from UI
 
-On the **"Inference"** page, upload a single image. The UI calls `infer:9000/predict` and displays detections with an overlay.
+On the **"Inference"** page, upload a single image. The UI calls `infer:9000/predict` and displays detections with an overlay. 
+
+You can also upload a zipped folder (test.zip) of pre- and post- disaster images with matching names for batch inference; you will see a downloadable link, when done, inside which are output images with predicted bounding boxes.
 
 ---
 
