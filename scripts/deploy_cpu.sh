@@ -3,7 +3,7 @@
 # CPU-only deployment script for quick testing
 set -e
 
-echo "🚀 Starting CPU-only lightweight deployment..."
+echo " Starting CPU-only lightweight deployment..."
 
 # Check if minikube is running
 if ! minikube status > /dev/null 2>&1; then
