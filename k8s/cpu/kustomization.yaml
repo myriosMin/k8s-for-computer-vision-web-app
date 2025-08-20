@@ -53,13 +53,13 @@ patches:
     name: infer
 
 images:
-# Use standard CPU images instead of enhanced for stability
-- name: localhost/ui:enhanced
+# Use standard CPU images
+- name: localhost/ui:cpu
   newName: localhost/ui
   newTag: cpu
-- name: localhost/infer:enhanced
+- name: localhost/infer:cpu
   newName: localhost/infer
   newTag: cpu
-- name: localhost/worker:dev
+- name: localhost/worker:cpu
   newName: localhost/worker
   newTag: cpu

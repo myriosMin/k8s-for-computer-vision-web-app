@@ -57,26 +57,54 @@ def load_models():
     """Load both current and canary models if available"""
     models = {"current": None, "canary": None}
     
+    # Ensure directory structure exists
+    model_dir = Path(MODEL_DIR)
+    current_dir = model_dir / "current"
+    canary_dir = model_dir / "canary"
+    
+    # Create directories if they don't exist
+    current_dir.mkdir(parents=True, exist_ok=True)
+    canary_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[INFO] Ensured model directories: {current_dir}, {canary_dir}")
+    
+    # Migrate existing model to current directory if needed
+    old_model_path = Path(MODEL_PATH)
+    current_model_path = current_dir / "best.pt"
+    
+    if old_model_path.exists() and not current_model_path.exists():
+        print(f"[INFO] Migrating existing model from {old_model_path} to {current_model_path}")
+        import shutil
+        shutil.copy2(old_model_path, current_model_path)
+        
+        # Create initial version metadata for current model
+        version_data = {
+            "version": 1,
+            "timestamp": datetime.now().isoformat(),
+            "deployment_mode": "production",
+            "migrated_from": str(old_model_path)
+        }
+        with open(current_dir / "version.json", 'w') as f:
+            json.dump(version_data, f, indent=2)
+        print(f"[INFO] Created version metadata for migrated model")
+    
     # Load current model
-    current_path = Path(MODEL_DIR) / "current" / "best.pt"
-    if current_path.exists():
-        print(f"[INFO] Loading current model from {current_path}")
-        models["current"] = YOLO(str(current_path))
+    if current_model_path.exists():
+        print(f"[INFO] Loading current model from {current_model_path}")
+        models["current"] = YOLO(str(current_model_path))
     else:
-        # Fallback to old model structure
-        best_path = Path(MODEL_PATH)
-        if best_path.exists():
-            print(f"[INFO] Loading model from {best_path}")
-            models["current"] = YOLO(str(best_path))
+        # Fallback to old model structure (if migration didn't work)
+        if old_model_path.exists():
+            print(f"[INFO] Loading model from fallback location {old_model_path}")
+            models["current"] = YOLO(str(old_model_path))
     
     # Load canary model if available
-    canary_path = Path(MODEL_DIR) / "canary" / "best.pt"
-    if canary_path.exists():
-        print(f"[INFO] Loading canary model from {canary_path}")
-        models["canary"] = YOLO(str(canary_path))
+    canary_model_path = canary_dir / "best.pt"
+    if canary_model_path.exists():
+        print(f"[INFO] Loading canary model from {canary_model_path}")
+        models["canary"] = YOLO(str(canary_model_path))
         
         # Load canary version metadata
-        version_path = Path(MODEL_DIR) / "canary" / "version.json"
+        version_path = canary_dir / "version.json"
         if version_path.exists():
             with open(version_path, 'r') as f:
                 version_data = json.load(f)

@@ -9,6 +9,7 @@ import csv
 import torch.nn as nn
 import cv2
 import numpy as np
+from datetime import datetime
 
 
 # --- Custom 6-channel YOLO Dataset ---
@@ -169,58 +170,72 @@ def main():
     models_dir = Path(os.getenv("MODELS_DIR", "/models"))
     
     try:
-        models_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure directory structure exists
+        current_dir = models_dir / "current"
+        canary_dir = models_dir / "canary"
+        current_dir.mkdir(parents=True, exist_ok=True)
+        canary_dir.mkdir(parents=True, exist_ok=True)
         
-        # Model versioning logic
+        # Model versioning logic for canary deployment
         import time
         import json
         
         # Find current version
-        version_file = models_dir / "version.json"
-        if version_file.exists():
-            with open(version_file) as f:
-                version_info = json.load(f)
-            current_version = version_info.get("current_version", 0)
+        current_version_file = current_dir / "version.json"
+        if current_version_file.exists():
+            with open(current_version_file) as f:
+                current_info = json.load(f)
+            current_version = current_info.get("version", 1)
             new_version = current_version + 1
         else:
-            current_version = 0
-            new_version = 1
+            current_version = 1
+            new_version = 2
             
-        # Save new model with version
-        new_model_path = models_dir / f"best-v{new_version}.pt"
-        shutil.copy2(best, new_model_path)
-        print(f"[versioning] Saved new model as {new_model_path}")
+        print(f"[versioning] Creating canary deployment: v{current_version} -> v{new_version}")
         
-        # Update version info for canary deployment
-        timestamp = int(time.time())
-        version_info = {
-            "current_version": current_version,
-            "canary_version": new_version,
-            "canary_start_time": timestamp,
-            "canary_active": True,
-            "models": {
-                f"v{current_version}": {
-                    "file": f"best-v{current_version}.pt" if current_version > 0 else "best.pt",
-                    "created_at": version_info.get("models", {}).get(f"v{current_version}", {}).get("created_at", timestamp),
-                    "traffic_weight": 50
-                },
-                f"v{new_version}": {
-                    "file": f"best-v{new_version}.pt",
-                    "created_at": timestamp,
-                    "traffic_weight": 50
-                }
-            }
+        # Save new model to canary directory
+        canary_model_path = canary_dir / "best.pt"
+        shutil.copy2(best, canary_model_path)
+        print(f"[versioning] Saved canary model to {canary_model_path}")
+        
+        # Extract training metrics
+        final_metrics = {}
+        if hasattr(results, 'results_dict') and results.results_dict:
+            metrics = results.results_dict
+            for key, value in metrics.items():
+                if isinstance(value, (int, float)):
+                    final_metrics[key] = value
+        
+        # Create canary version metadata
+        canary_version_data = {
+            "version": new_version,
+            "timestamp": datetime.now().isoformat(),
+            "canary_start_time": datetime.now().isoformat(),
+            "deployment_mode": "canary",
+            "traffic_weight": 0.5,
+            "training_config": {
+                "epochs": epochs,
+                "batch_size": batch,
+                "image_size": imgsz,
+                "device": device
+            },
+            "metrics": final_metrics,
+            "parent_version": current_version
         }
         
-        # Save version metadata
-        with open(version_file, 'w') as f:
-            json.dump(version_info, f, indent=2)
+        # Save canary metadata
+        with open(canary_dir / "version.json", 'w') as f:
+            json.dump(canary_version_data, f, indent=2)
         
-        print(f"[versioning] Starting canary deployment: v{current_version} (50%) + v{new_version} (50%)")
-        print(f"[versioning] Auto-promotion in 3 minutes if healthy")
+        print(f"[versioning] Canary deployment active: 50/50 traffic split")
+        print(f"[versioning] Auto-promotion scheduled in 3 minutes")
+        print(f"[versioning] Canary version: {new_version}")
+        
+        # Schedule auto-promotion (simplified - in production this would be handled by the inference service)
+        print(f"[versioning] Canary deployment setup complete")
         
     except Exception as e:
-        print(f"[publish][WARN] Could not publish versioned model: {e}")
+        print(f"[publish][WARN] Could not publish canary model: {e}")
         # Fallback to old behavior
         pub = models_dir / "best.pt"
         tmp = pub.with_suffix(".pt.tmp")

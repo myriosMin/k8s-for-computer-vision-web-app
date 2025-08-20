@@ -59,7 +59,7 @@ def upload_dataset():
 def trigger_preprocess():
     try:
         dataset_file = request.form.get("dataset", "aiad_data.zip")
-        img_size      = request.form.get("img_size", "1024")
+        img_size      = request.form.get("img_size", "640")
 
         patch_configmap({
             "RAW_ZIP_PATH": dataset_file,
@@ -80,7 +80,7 @@ def trigger_train():
     try:
         base_weights = request.form.get("base_weights", "yolo11n-seg.pt")
         epochs       = request.form.get("epochs",       "10")
-        img_size     = request.form.get("img_size",     "1024")
+        img_size     = request.form.get("img_size",     "640")
         batch        = request.form.get("batch",        "8")
 
         patch_configmap({
